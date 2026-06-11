@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Süpermarket kampanyalarını kolayca takip edin. Başlangıç ve bitiş tarihlerini yönetin, hatırlatıcılar alın.">
+  <meta name="theme-color" content="#0a0e1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>KampanyaTakip - Süpermarket Kampanya Yönetimi</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header id="app-header">
+      <div class="header-content">
+        <div class="header-left">
+          <span class="logo-icon">🏷️</span>
+          <h1>KampanyaTakip</h1>
+        </div>
+        <button id="btn-notification-toggle" class="header-btn" title="Bildirimleri Aç">
+          <span class="notification-icon">🔔</span>
+          <span id="notification-badge" class="badge hidden">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ========== DASHBOARD VIEW ========== -->
+    <main id="view-dashboard" class="view active">
+      <div class="view-content">
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card" data-type="active">
+            <div class="stat-icon-wrap">
+              <svg class="stat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-active">0</span>
+              <span class="stat-label">Aktif</span>
+            </div>
+          </div>
+          <div class="stat-card" data-type="starting">
+            <div class="stat-icon-wrap">
+              <svg class="stat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-starting-today">0</span>
+              <span class="stat-label">Bugün Başlayan</span>
+            </div>
+          </div>
+          <div class="stat-card" data-type="ending">
+            <div class="stat-icon-wrap">
+              <svg class="stat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-ending-today">0</span>
+              <span class="stat-label">Bugün Biten</span>
+            </div>
+          </div>
+          <div class="stat-card" data-type="week">
+            <div class="stat-icon-wrap">
+              <svg class="stat-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-ending-week">0</span>
+              <span class="stat-label">Bu Hafta Biten</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Today's Campaigns -->
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">
+              <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Bugünün Kampanyaları
+            </h2>
+          </div>
+          <div id="today-campaigns" class="campaign-list">
+            <div class="empty-state">
+              <span class="empty-icon">📭</span>
+              <p>Bugün başlayan veya biten kampanya yok</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Ending Soon -->
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">
+              <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Yakında Bitenler
+            </h2>
+          </div>
+          <div id="ending-soon" class="campaign-list">
+            <div class="empty-state">
+              <span class="empty-icon">✅</span>
+              <p>Yakında biten kampanya yok</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ========== CAMPAIGNS VIEW ========== -->
+    <main id="view-campaigns" class="view">
+      <div class="view-content">
+        <!-- Search & Filter -->
+        <div class="search-filter-bar">
+          <div class="search-box">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="search-input" placeholder="Kampanya ara..." autocomplete="off">
+          </div>
+          <div class="filter-tabs" id="filter-tabs">
+            <button class="filter-btn active" data-filter="all">Tümü</button>
+            <button class="filter-btn" data-filter="active">Aktif</button>
+            <button class="filter-btn" data-filter="upcoming">Yaklaşan</button>
+            <button class="filter-btn" data-filter="expired">Biten</button>
+          </div>
+        </div>
+
+        <!-- Sort -->
+        <div class="sort-bar">
+          <label for="sort-select">Sıralama:</label>
+          <select id="sort-select">
+            <option value="endDate">Bitiş Tarihine Göre</option>
+            <option value="startDate">Başlangıç Tarihine Göre</option>
+            <option value="name">Ada Göre</option>
+            <option value="createdAt">Eklenme Tarihine Göre</option>
+          </select>
+        </div>
+
+        <div id="campaigns-list" class="campaign-list">
+          <div class="empty-state">
+            <span class="empty-icon">🏷️</span>
+            <p>Henüz kampanya eklenmemiş</p>
+            <button class="btn btn-primary btn-sm" onclick="app.openModal()">İlk Kampanyayı Ekle</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ========== SETTINGS VIEW ========== -->
+    <main id="view-settings" class="view">
+      <div class="view-content">
+        <h2 class="section-title settings-main-title">
+          <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          Ayarlar
+        </h2>
+
+        <div class="settings-group">
+          <h3 class="settings-group-title">Bildirim Tercihleri</h3>
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-label">Bildirimleri Etkinleştir</span>
+              <span class="setting-desc">Tüm kampanya hatırlatıcıları</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-notifications" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-label">Başlangıç Bildirimi</span>
+              <span class="setting-desc">Kampanya başladığında bildir</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-notify-start" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-label">Bitiş Bildirimi</span>
+              <span class="setting-desc">Kampanya bittiğinde bildir</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-notify-end" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-label">1 Gün Önce Hatırlat</span>
+              <span class="setting-desc">Bitiş tarihinden 1 gün önce</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-notify-day-before" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 class="settings-group-title">Veri Yönetimi</h3>
+          <button id="btn-export" class="settings-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Verileri Dışa Aktar (JSON)
+          </button>
+          <button id="btn-import" class="settings-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Verileri İçe Aktar
+          </button>
+          <input type="file" id="import-file" accept=".json" style="display:none">
+          <button id="btn-clear-all" class="settings-btn danger">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            Tüm Verileri Sil
+          </button>
+        </div>
+
+        <div class="settings-group">
+          <h3 class="settings-group-title">Test & Bilgi</h3>
+          <button id="btn-test-notification" class="settings-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            Test Bildirimi Gönder
+          </button>
+          <div class="app-info">
+            <p>KampanyaTakip v1.0</p>
+            <p class="text-muted">Verileriniz cihazınızda güvenle saklanır.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- FAB -->
+    <button id="fab-add" class="fab" title="Yeni Kampanya Ekle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav">
+      <button class="nav-btn active" data-view="dashboard" id="nav-dashboard">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="nav-label">Panel</span>
+      </button>
+      <button class="nav-btn" data-view="campaigns" id="nav-campaigns">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <span class="nav-label">Kampanyalar</span>
+      </button>
+      <button class="nav-btn" data-view="settings" id="nav-settings">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span class="nav-label">Ayarlar</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ========== CAMPAIGN MODAL ========== -->
+  <div id="campaign-modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title">Yeni Kampanya</h2>
+        <button id="btn-modal-close" class="modal-close" aria-label="Kapat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="campaign-form">
+        <input type="hidden" id="input-id">
+        <div class="form-group">
+          <label for="input-name">Kampanya Adı *</label>
+          <input type="text" id="input-name" required placeholder="Örn: %30 İndirim Haftası" maxlength="100">
+        </div>
+        <div class="form-group">
+          <label for="input-description">Açıklama</label>
+          <textarea id="input-description" rows="3" placeholder="Kampanya detaylarını yazın..." maxlength="500"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="input-category">Kategori</label>
+          <select id="input-category">
+            <option value="indirim">💰 İndirim</option>
+            <option value="2al1ode">🎁 2 Al 1 Öde</option>
+            <option value="hediye">🎀 Hediyeli</option>
+            <option value="ozel">⭐ Özel Kampanya</option>
+            <option value="sadakat">💳 Sadakat Kartı</option>
+            <option value="sezon">🌞 Sezon Kampanyası</option>
+            <option value="diger">📦 Diğer</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="input-start">Başlangıç *</label>
+            <input type="date" id="input-start" required>
+          </div>
+          <div class="form-group">
+            <label for="input-end">Bitiş *</label>
+            <input type="date" id="input-end" required>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="btn-cancel" class="btn btn-secondary">İptal</button>
+          <button type="submit" id="btn-submit" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Kaydet
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== DELETE CONFIRM MODAL ========== -->
+  <div id="delete-modal" class="modal-overlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Kampanyayı Sil</h2>
+        <button class="modal-close btn-delete-cancel" aria-label="Kapat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Bu kampanyayı silmek istediğinizden emin misiniz?</p>
+        <p id="delete-campaign-name" class="text-accent"></p>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary btn-delete-cancel">Vazgeç</button>
+        <button type="button" id="btn-delete-confirm" class="btn btn-danger">Sil</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
