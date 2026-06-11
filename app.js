@@ -478,6 +478,11 @@ const app = {
           </div>
           <span class="campaign-countdown ${countdownClass}">${countdown}</span>
         </div>
+        <div class="campaign-poster-status">
+          <span class="poster-badge poster-${campaign.posterStatus || 'pending'}" onclick="app.togglePosterStatus('${campaign.id}', event)">
+            ${this.getPosterStatusLabel(campaign.posterStatus || 'pending')}
+          </span>
+        </div>
         ${showActions ? `
         <div class="campaign-actions">
           <button class="campaign-action-btn" onclick="app.editCampaign('${campaign.id}')">
@@ -509,11 +514,13 @@ const app = {
       document.getElementById('input-name').value = campaign.name;
       document.getElementById('input-description').value = campaign.description || '';
       document.getElementById('input-category').value = campaign.category;
+      document.getElementById('input-poster-status').value = campaign.posterStatus || 'pending';
       document.getElementById('input-start').value = campaign.startDate;
       document.getElementById('input-end').value = campaign.endDate;
     } else {
       this.editingId = null;
       title.textContent = 'Yeni Kampanya';
+      document.getElementById('input-poster-status').value = 'pending';
       // Set default dates
       const today = this.getTodayStr();
       document.getElementById('input-start').value = today;
@@ -536,6 +543,7 @@ const app = {
     const name = document.getElementById('input-name').value.trim();
     const description = document.getElementById('input-description').value.trim();
     const category = document.getElementById('input-category').value;
+    const posterStatus = document.getElementById('input-poster-status').value;
     const startDate = document.getElementById('input-start').value;
     const endDate = document.getElementById('input-end').value;
 
@@ -555,7 +563,7 @@ const app = {
       if (index !== -1) {
         this.campaigns[index] = {
           ...this.campaigns[index],
-          name, description, category, startDate, endDate,
+          name, description, category, posterStatus, startDate, endDate,
           updatedAt: new Date().toISOString()
         };
         this.showToast('Kampanya güncellendi', 'success');
@@ -564,7 +572,7 @@ const app = {
       // Create new
       const campaign = {
         id: this.generateId(),
-        name, description, category, startDate, endDate,
+        name, description, category, posterStatus, startDate, endDate,
         createdAt: new Date().toISOString()
       };
       this.campaigns.push(campaign);
@@ -964,6 +972,41 @@ const app = {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  },
+
+  getPosterStatusLabel(status) {
+    const statuses = {
+      pending: '⏳ Afiş Asılmadı',
+      hung: '📌 Afiş Asıldı',
+      removed: '❌ Afiş Söküldü'
+    };
+    return statuses[status] || statuses.pending;
+  },
+
+  togglePosterStatus(id, event) {
+    if (event) event.stopPropagation();
+    const campaign = this.campaigns.find(c => c.id === id);
+    if (!campaign) return;
+
+    const current = campaign.posterStatus || 'pending';
+    let next = 'pending';
+    if (current === 'pending') next = 'hung';
+    else if (current === 'hung') next = 'removed';
+    else if (current === 'removed') next = 'pending';
+
+    campaign.posterStatus = next;
+    campaign.updatedAt = new Date().toISOString();
+    
+    this.saveData();
+    this.renderDashboard();
+    this.renderCampaigns();
+    
+    const labels = {
+      pending: 'Afiş asılmadı olarak işaretlendi',
+      hung: 'Afiş asıldı olarak işaretlendi',
+      removed: 'Afiş söküldü olarak işaretlendi'
+    };
+    this.showToast(labels[next], 'info');
   }
 };
 

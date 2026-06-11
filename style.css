@@ -1309,3 +1309,48 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* --- Campaign Poster Status --- */
+.campaign-poster-status {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.poster-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  user-select: none;
+  transition: var(--transition);
+}
+
+.poster-badge:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.poster-badge.poster-pending {
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.poster-badge.poster-hung {
+  color: var(--status-active);
+  background: var(--status-active-bg);
+  border-color: var(--status-active-border);
+}
+
+.poster-badge.poster-removed {
+  color: var(--status-expired);
+  background: var(--status-expired-bg);
+  border-color: var(--status-expired-border);
+}
