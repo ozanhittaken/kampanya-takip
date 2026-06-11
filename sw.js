@@ -1,10 +1,10 @@
 const CACHE_NAME = 'kampanya-takip-v1';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/manifest.json'
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './manifest.json'
 ];
 
 // Install: Cache core assets

@@ -2,7 +2,7 @@
   "name": "KampanyaTakip - Süpermarket Kampanya Yönetimi",
   "short_name": "KampanyaTakip",
   "description": "Süpermarket kampanyalarını kolayca takip edin, hatırlatıcılar alın.",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0a0e1a",
   "theme_color": "#0a0e1a",
