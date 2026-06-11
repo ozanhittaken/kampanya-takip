@@ -485,11 +485,15 @@ const app = {
         </div>
         ${showActions ? `
         <div class="campaign-actions">
-          <button class="campaign-action-btn" onclick="app.editCampaign('${campaign.id}')">
+          <button class="campaign-action-btn" onclick="app.editCampaign('${campaign.id}')" title="Düzenle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Düzenle
           </button>
-          <button class="campaign-action-btn delete" onclick="app.deleteCampaign('${campaign.id}')">
+          <button class="campaign-action-btn" onclick="app.createPosterDemand('${campaign.id}')" title="Afiş Talebi Gönder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Afiş İste
+          </button>
+          <button class="campaign-action-btn delete" onclick="app.deleteCampaign('${campaign.id}')" title="Sil">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
             Sil
           </button>
@@ -1007,6 +1011,39 @@ const app = {
       removed: 'Afiş söküldü olarak işaretlendi'
     };
     this.showToast(labels[next], 'info');
+  },
+
+  createPosterDemand(id) {
+    const campaign = this.campaigns.find(c => c.id === id);
+    if (!campaign) return;
+
+    const cat = this.categories[campaign.category] || this.categories.diger;
+    
+    // Format a beautiful text template
+    const textTemplate = `📋 KAMPANYA GÖRSEL AFİŞ TALEBİ
+
+Kampanya Adı: ${campaign.name}
+Kategori: ${cat.label}
+Başlangıç Tarihi: ${this.formatDateLong(campaign.startDate)}
+Bitiş Tarihi: ${this.formatDateLong(campaign.endDate)}
+Detaylar & Açıklama: ${campaign.description || 'Belirtilmedi'}
+
+-- 
+KampanyaTakip üzerinden otomatik oluşturuldu.`;
+
+    // Try to copy to clipboard
+    navigator.clipboard.writeText(textTemplate)
+      .then(() => {
+        this.showToast('Kampanya detayları panoya kopyalandı! Talep sayfası açılıyor...', 'success');
+      })
+      .catch((err) => {
+        console.error('Kopyalama hatası:', err);
+        this.showToast('Talep sayfası açılıyor...', 'info');
+      })
+      .finally(() => {
+        // Open the company request page in a new window/tab
+        window.open('https://corewishasset.com.tr/digital-form/demand-form/create/75', '_blank');
+      });
   }
 };
 
