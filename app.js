@@ -171,7 +171,11 @@ const app = {
     document.getElementById('setting-notifications').addEventListener('change', (e) => {
       this.settings.notifications = e.target.checked;
       this.saveSettings();
-      if (e.target.checked) this.requestNotificationPermission();
+      if (e.target.checked) {
+        this.requestNotificationPermission();
+      } else {
+        this.updateNotificationUI();
+      }
     });
     document.getElementById('setting-notify-start').addEventListener('change', (e) => {
       this.settings.notifyStart = e.target.checked;
@@ -346,6 +350,17 @@ const app = {
     this.animateCounter('stat-starting-today', startingTodayCount);
     this.animateCounter('stat-ending-today', endingTodayCount);
     this.animateCounter('stat-ending-week', endingWeekCount);
+
+    // Update badge count
+    const badge = document.getElementById('notification-badge');
+    if (badge) {
+      if (todayCampaigns.length > 0) {
+        badge.textContent = todayCampaigns.length;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
 
     // Render today's campaigns
     const todayContainer = document.getElementById('today-campaigns');
@@ -597,29 +612,87 @@ const app = {
   // =====================
   async requestNotificationPermission() {
     if (!('Notification' in window)) {
-      this.showToast('Bu tarayıcı bildirimleri desteklemiyor', 'error');
+      this.showToast('Bu cihaz veya tarayıcı bildirimleri desteklemiyor', 'error');
+      this.settings.notifications = false;
+      this.saveSettings();
+      this.updateNotificationUI();
       return;
+    }
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
+    if (isIOS && !isStandalone) {
+      this.showToast('iOS bildirimleri için: Paylaş butonuna basıp "Ana Ekrana Ekle" yaptıktan sonra uygulamayı ana ekrandan açın.', 'warning');
+      this.settings.notifications = false;
+      this.saveSettings();
+      this.updateNotificationUI();
+      return;
+    }
+
+    // Wait for service worker to be ready (critical for PWAs, especially iOS)
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.ready;
+      } catch (e) {
+        console.error('Service worker ready check failed:', e);
+      }
     }
 
     if (Notification.permission === 'granted') {
       this.showToast('Bildirimler zaten aktif!', 'info');
+      this.settings.notifications = true;
+      this.saveSettings();
+      this.updateNotificationUI();
       return;
     }
 
     if (Notification.permission === 'denied') {
-      this.showToast('Bildirimler tarayıcı ayarlarından engellenmiş. Lütfen tarayıcı ayarlarından izin verin.', 'warning');
+      let msg = 'Bildirim izni engellenmiş. Lütfen cihaz ayarlarınızdan izin verin.';
+      if (isIOS) {
+        msg = 'Bildirim izni engellenmiş. Telefonunuzun Ayarlar -> Bildirimler -> KampanyaTakip bölümünden bildirimlere izin verin.';
+      } else if (/Android/i.test(navigator.userAgent)) {
+        msg = 'Bildirim izni engellenmiş. Telefonunuzun Ayarlar -> Uygulamalar -> KampanyaTakip -> Bildirimler bölümünden izin verin.';
+      }
+      this.showToast(msg, 'warning');
+      this.settings.notifications = false;
+      this.saveSettings();
+      this.updateNotificationUI();
       return;
     }
 
     try {
-      const permission = await Notification.requestPermission();
+      // Prompt for permission (supporting both callback and promise syntax)
+      const permission = await new Promise((resolve) => {
+        const result = Notification.requestPermission(resolve);
+        if (result && typeof result.then === 'function') {
+          result.then(resolve);
+        }
+      });
+
       if (permission === 'granted') {
         this.showToast('Bildirimler etkinleştirildi!', 'success');
+        this.settings.notifications = true;
+        this.saveSettings();
+        this.updateNotificationUI();
+        // Trigger a test notification to confirm it works
+        this.sendNotification(
+          '🚀 Bildirimler Aktif!',
+          'KampanyaTakip hatırlatıcı bildirimleri başarıyla etkinleştirildi.',
+          'welcome-notification'
+        );
       } else {
         this.showToast('Bildirim izni reddedildi', 'warning');
+        this.settings.notifications = false;
+        this.saveSettings();
+        this.updateNotificationUI();
       }
     } catch (e) {
-      console.error('Bildirim izni hatası:', e);
+      console.error('Bildirim izni istenirken hata:', e);
+      this.showToast('Bildirim izni istenirken bir hata oluştu.', 'error');
+      this.settings.notifications = false;
+      this.saveSettings();
+      this.updateNotificationUI();
     }
   },
 
@@ -628,18 +701,22 @@ const app = {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
     try {
-      // Try service worker notification first (works in background)
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-          type: 'SHOW_NOTIFICATION',
-          title, body, tag
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        registration.showNotification(title, {
+          body,
+          tag,
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">🏷️</text></svg>',
+          badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">🔔</text></svg>',
+          vibrate: [200, 100, 200],
+          requireInteraction: true
         });
       } else {
         // Fallback to direct notification
         new Notification(title, {
           body,
           tag,
-          icon: '🏷️',
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">🏷️</text></svg>',
           requireInteraction: true
         });
       }
@@ -730,7 +807,9 @@ const app = {
   async registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       try {
-        await navigator.serviceWorker.register('sw.js');
+        const registration = await navigator.serviceWorker.register('sw.js');
+        console.log('Service Worker registered successfully:', registration);
+        this.updateNotificationUI();
       } catch (e) {
         console.log('Service Worker kayıt hatası:', e);
       }
@@ -745,6 +824,38 @@ const app = {
     document.getElementById('setting-notify-start').checked = this.settings.notifyStart;
     document.getElementById('setting-notify-end').checked = this.settings.notifyEnd;
     document.getElementById('setting-notify-day-before').checked = this.settings.notifyDayBefore;
+    this.updateNotificationUI();
+  },
+
+  updateNotificationUI() {
+    const btn = document.getElementById('btn-notification-toggle');
+    if (!btn) return;
+
+    const iconEl = btn.querySelector('.notification-icon');
+    const hasPermission = 'Notification' in window && Notification.permission === 'granted';
+    const isEnabled = this.settings.notifications && hasPermission;
+
+    if (isEnabled) {
+      btn.classList.add('active');
+      btn.style.color = 'var(--accent)';
+      btn.style.borderColor = 'var(--border-focus)';
+      btn.style.boxShadow = '0 0 10px var(--accent-glow)';
+      btn.title = 'Bildirimler Aktif';
+      if (iconEl) iconEl.textContent = '🔔';
+    } else {
+      btn.classList.remove('active');
+      btn.style.color = '';
+      btn.style.borderColor = '';
+      btn.style.boxShadow = '';
+      btn.title = 'Bildirimleri Aç';
+      if (iconEl) iconEl.textContent = '🔕';
+    }
+
+    // Also update checkbox in settings
+    const checkbox = document.getElementById('setting-notifications');
+    if (checkbox) {
+      checkbox.checked = isEnabled;
+    }
   },
 
   // =====================
