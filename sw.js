@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kampanya-takip-v22';
+const CACHE_NAME = 'kampanya-takip-v23';
 const ASSETS = [
   './',
   './index.html',
@@ -31,15 +31,11 @@ const cacheBustAsset = async (cache, asset) => {
   }
 };
 
-// Install: Cache core assets with cache-busting
+// Install: Cache core assets in parallel
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(async (cache) => {
-        for (const asset of ASSETS) {
-          await cacheBustAsset(cache, asset);
-        }
-      })
+      .then(cache => Promise.all(ASSETS.map(asset => cacheBustAsset(cache, asset))))
       .then(() => self.skipWaiting())
   );
 });
@@ -55,19 +51,31 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Network-first strategy (prevents serving stale/cached 404s)
+// Fetch: Network-first strategy with same-origin filter
 self.addEventListener('fetch', (event) => {
+  // Only cache same-origin requests
+  const isSameOrigin = event.request.url.startsWith(self.location.origin);
+  
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Cache successful responses
-        if (response.ok) {
+        // Cache only same-origin successful responses
+        if (response.ok && isSameOrigin) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => {
+        // Offline fallback
+        return caches.match(event.request).then(cached => {
+          // SPA navigation fallback — if no cache hit for a navigation request, serve index.html
+          if (!cached && event.request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+          return cached;
+        });
+      })
   );
 });
 

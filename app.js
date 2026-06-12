@@ -14,8 +14,11 @@ const app = {
   notifiedSet: new Set(),
   posterFilter: 'all',
   currentCategory: 'all',
+  darkTheme: true,
+  batchMode: false,
+  selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v22)',
+    version: '1.0.0 (v23)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -33,7 +36,8 @@ const app = {
     notifications: true,
     notifyStart: true,
     notifyEnd: true,
-    notifyDayBefore: true
+    notifyDayBefore: true,
+    darkTheme: true
   },
 
   // =====================
@@ -49,6 +53,21 @@ const app = {
     this.startNotificationChecker();
     this.registerServiceWorker();
     this.applySettings();
+
+    // Online/Offline banner
+    window.addEventListener('offline', () => {
+      const banner = document.getElementById('offline-banner');
+      if (banner) banner.classList.add('visible');
+    });
+    window.addEventListener('online', () => {
+      const banner = document.getElementById('offline-banner');
+      if (banner) banner.classList.remove('visible');
+    });
+    // Check initial state
+    if (!navigator.onLine) {
+      const banner = document.getElementById('offline-banner');
+      if (banner) banner.classList.add('visible');
+    }
 
     // Page Visibility API to save battery/resources
     document.addEventListener('visibilitychange', () => {
@@ -310,6 +329,35 @@ const app = {
       this.saveSettings();
     });
 
+    // Dark theme toggle
+    const darkThemeToggle = document.getElementById('setting-dark-theme');
+    if (darkThemeToggle) {
+      darkThemeToggle.addEventListener('change', (e) => {
+        this.darkTheme = e.target.checked;
+        document.documentElement.classList.toggle('light-theme', !this.darkTheme);
+        this.settings.darkTheme = this.darkTheme;
+        this.saveSettings();
+      });
+    }
+
+    // Batch mode handlers
+    const batchSelectAllBtn = document.getElementById('batch-select-all');
+    if (batchSelectAllBtn) {
+      batchSelectAllBtn.addEventListener('click', () => this.batchSelectAll());
+    }
+    const batchDeleteBtn = document.getElementById('batch-delete');
+    if (batchDeleteBtn) {
+      batchDeleteBtn.addEventListener('click', () => this.batchDelete());
+    }
+    const batchCancelBtn = document.getElementById('batch-cancel');
+    if (batchCancelBtn) {
+      batchCancelBtn.addEventListener('click', () => this.toggleBatchMode(false));
+    }
+    const batchToggleBtn = document.getElementById('btn-batch-toggle');
+    if (batchToggleBtn) {
+      batchToggleBtn.addEventListener('click', () => this.toggleBatchMode());
+    }
+
     // Data management
     document.getElementById('btn-export').addEventListener('click', () => this.exportData());
     document.getElementById('btn-import').addEventListener('click', () => {
@@ -516,8 +564,11 @@ const app = {
           <p>Yarın biten kampanya yok</p>
         </div>`;
     } else {
-      endingContainer.innerHTML = endingSoon.slice(0, 5).map((c, i) => this.renderCampaignCard(c, i)).join('');
+      endingContainer.innerHTML = endingSoon.slice(0, 5).map((c, i) => this.renderCampaignCard(c, i, false)).join('');
     }
+
+    // Kategori dağılımı grafiği
+    this.renderCategoryChart();
   },
 
   animateCounter(elementId, target) {
@@ -542,6 +593,9 @@ const app = {
   //   CAMPAIGN LIST
   // =====================
   renderCampaigns() {
+    // Filtre sekmelerine sayaç ekle
+    this.updateFilterCounts();
+
     let filtered = [...this.campaigns];
 
     // Status Filter
@@ -584,6 +638,13 @@ const app = {
       }
     });
 
+    // Batch toolbar
+    const batchToolbar = document.getElementById('batch-toolbar');
+    if (batchToolbar) {
+      batchToolbar.style.display = this.batchMode ? 'flex' : 'none';
+      this.updateBatchToolbar();
+    }
+
     const container = document.getElementById('campaigns-list');
 
     // Poster filter banner güncelle
@@ -605,14 +666,17 @@ const app = {
     const { status, countdownText: countdown, countdownClass } = this.getCampaignInfo(campaign);
     const cat = this.categories[campaign.category] || this.categories.diger;
     const delay = Math.min(index * 0.05, 0.3);
+    const progressInfo = status !== 'upcoming' ? this.getProgressInfo(campaign, status) : null;
 
     return `
-      <div class="campaign-card status-${status}" style="animation-delay: ${delay}s" data-id="${campaign.id}">
+      <div class="campaign-card status-${status}${this.batchMode ? ' batch-mode' : ''}${this.selectedCampaigns.has(campaign.id) ? ' selected' : ''}" style="animation-delay: ${delay}s" data-id="${campaign.id}"${this.batchMode ? ` onclick="app.toggleCampaignSelection('${campaign.id}')"` : ''}>
+        ${this.batchMode ? `<input type="checkbox" class="batch-checkbox" ${this.selectedCampaigns.has(campaign.id) ? 'checked' : ''} onchange="app.toggleCampaignSelection('${campaign.id}')" onclick="event.stopPropagation()">` : ''}
         <div class="campaign-card-header">
           <span class="campaign-name">${this.escapeHtml(campaign.name)}</span>
           <span class="campaign-category">${cat.icon} ${cat.label}</span>
         </div>
         ${campaign.description ? `<p class="campaign-description">${this.escapeHtml(campaign.description)}</p>` : ''}
+        ${campaign.notes ? `<div class="campaign-notes">📝 ${this.escapeHtml(campaign.notes)}</div>` : ''}
         <div class="campaign-meta">
           <div class="campaign-dates">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -620,6 +684,9 @@ const app = {
           </div>
           <span class="campaign-countdown ${countdownClass}">${countdown}</span>
         </div>
+        ${progressInfo ? `
+          <div class="campaign-progress"><div class="campaign-progress-bar ${progressInfo.barClass}" style="width:${progressInfo.pct}%"></div></div>
+          <div class="campaign-progress-text">${progressInfo.elapsedDays}/${progressInfo.totalDays} gün (${progressInfo.pct}%)</div>` : ''}
         <div class="campaign-poster-status">
           <span class="poster-badge poster-${campaign.posterStatus || 'pending'}" onclick="app.togglePosterStatus('${campaign.id}', event)">
             ${this.getPosterStatusLabel(campaign.posterStatus || 'pending')}
@@ -666,6 +733,7 @@ const app = {
       // input-id artık kullanılmıyor, editingId yeterli
       document.getElementById('input-name').value = campaign.name;
       document.getElementById('input-description').value = campaign.description || '';
+      document.getElementById('input-notes').value = campaign.notes || '';
       document.getElementById('input-category').value = campaign.category;
       document.getElementById('input-poster-status').value = campaign.posterStatus || 'pending';
       document.getElementById('input-demand-status').value = campaign.demandStatus || 'pending';
@@ -697,6 +765,7 @@ const app = {
 
     const name = document.getElementById('input-name').value.trim();
     const description = document.getElementById('input-description').value.trim();
+    const notes = document.getElementById('input-notes').value.trim();
     const category = document.getElementById('input-category').value;
     const posterStatus = document.getElementById('input-poster-status').value;
     const demandStatus = document.getElementById('input-demand-status').value;
@@ -719,7 +788,7 @@ const app = {
       if (index !== -1) {
         this.campaigns[index] = {
           ...this.campaigns[index],
-          name, description, category, posterStatus, demandStatus, startDate, endDate,
+          name, description, notes, category, posterStatus, demandStatus, startDate, endDate,
           updatedAt: new Date().toISOString()
         };
         this.showToast('Kampanya güncellendi', 'success');
@@ -728,7 +797,7 @@ const app = {
       // Create new
       const campaign = {
         id: this.generateId(),
-        name, description, category, posterStatus, demandStatus, startDate, endDate,
+        name, description, notes, category, posterStatus, demandStatus, startDate, endDate,
         createdAt: new Date().toISOString()
       };
       this.campaigns.push(campaign);
@@ -1012,19 +1081,23 @@ const app = {
   // =====================
   async registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      // Auto-reload page when new service worker takes control (bypasses aggressive PWA caching)
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
-
       try {
         const registration = await navigator.serviceWorker.register('sw.js');
         console.log('Service Worker registered successfully:', registration);
         this.updateNotificationUI();
+
+        // SW update detection
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                const banner = document.getElementById('sw-update-banner');
+                if (banner) banner.style.display = 'flex';
+              }
+            });
+          }
+        });
       } catch (e) {
         console.log('Service Worker kayıt hatası:', e);
       }
@@ -1039,6 +1112,15 @@ const app = {
     document.getElementById('setting-notify-start').checked = this.settings.notifyStart;
     document.getElementById('setting-notify-end').checked = this.settings.notifyEnd;
     document.getElementById('setting-notify-day-before').checked = this.settings.notifyDayBefore;
+
+    // Dark theme
+    const darkToggle = document.getElementById('setting-dark-theme');
+    if (darkToggle) {
+      this.darkTheme = this.settings.darkTheme !== false;
+      darkToggle.checked = this.darkTheme;
+      document.documentElement.classList.toggle('light-theme', !this.darkTheme);
+    }
+
     this.updateNotificationUI();
 
     // Update dynamic version in info footer
@@ -1082,11 +1164,34 @@ const app = {
   // =====================
   //   IMPORT / EXPORT
   // =====================
-  exportData() {
+  async exportData() {
+    const choice = await this.showConfirm(
+      'Dışa Aktarma',
+      'Hangi kampanyaları dışa aktarmak istiyorsunuz?',
+      [
+        { label: 'Tümünü Aktar', class: 'btn-primary', value: 'all' },
+        { label: 'Filtrelenenleri Aktar', class: 'btn-secondary', value: 'filtered' },
+        { label: 'İptal', class: 'btn-secondary', value: 'cancel' }
+      ]
+    );
+    if (choice === 'cancel') return;
+
+    let campaignsToExport;
+    if (choice === 'filtered') {
+      campaignsToExport = this.getFilteredCampaigns();
+    } else {
+      campaignsToExport = this.campaigns;
+    }
+
+    if (campaignsToExport.length === 0) {
+      this.showToast('Dışa aktarılacak kampanya yok', 'warning');
+      return;
+    }
+
     const data = {
       version: 1,
       exportDate: new Date().toISOString(),
-      campaigns: this.campaigns
+      campaigns: campaignsToExport
     };
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1099,7 +1204,7 @@ const app = {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    this.showToast('Veriler dışa aktarıldı', 'success');
+    this.showToast(`${campaignsToExport.length} kampanya dışa aktarıldı`, 'success');
   },
 
   importData(e) {
@@ -1411,6 +1516,7 @@ const app = {
       }
     });
     this.updateDashboardStatsSilently();
+    this.updateFilterCounts();
     if (this.posterFilter === 'pending' && posterStatus && posterStatus !== 'pending') {
       this.renderCampaigns();
     }
@@ -1745,6 +1851,163 @@ const app = {
   },
 
   // truncateText kaldırıldı (ölü kod)
+
+  getProgressInfo(campaign, status) {
+    const startDay = this.parseLocalDate(campaign.startDate);
+    const endDay = this.parseLocalDate(campaign.endDate);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const totalDays = Math.max(1, Math.ceil((endDay - startDay) / 86400000));
+    const elapsedDays = Math.ceil((today - startDay) / 86400000);
+    const pct = Math.max(0, Math.min(100, Math.round((elapsedDays / totalDays) * 100)));
+    let barClass = '';
+    if (status === 'expired') barClass = 'progress-expired';
+    else if (status === 'ending') barClass = 'progress-ending';
+    return { pct, elapsedDays: Math.max(0, elapsedDays), totalDays, barClass };
+  },
+
+  updateFilterCounts() {
+    const counts = { all: 0, active: 0, upcoming: 0, expired: 0 };
+    this.campaigns.forEach(c => {
+      counts.all++;
+      const s = this.getCampaignStatus(c);
+      if (s === 'active' || s === 'ending') counts.active++;
+      else if (s === 'upcoming') counts.upcoming++;
+      else if (s === 'expired') counts.expired++;
+    });
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      const filter = btn.dataset.filter;
+      if (filter && counts[filter] !== undefined) {
+        let badge = btn.querySelector('.filter-badge');
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'filter-badge';
+          btn.appendChild(badge);
+        }
+        badge.textContent = counts[filter];
+      }
+    });
+  },
+
+  getFilteredCampaigns() {
+    let filtered = [...this.campaigns];
+    if (this.currentFilter !== 'all') {
+      filtered = filtered.filter(c => {
+        const status = this.getCampaignStatus(c);
+        if (this.currentFilter === 'active') return status === 'active' || status === 'ending';
+        if (this.currentFilter === 'upcoming') return status === 'upcoming';
+        if (this.currentFilter === 'expired') return status === 'expired';
+        return true;
+      });
+    }
+    if (this.currentCategory !== 'all') {
+      filtered = filtered.filter(c => c.category === this.currentCategory);
+    }
+    if (this.posterFilter === 'pending') {
+      filtered = filtered.filter(c => (c.posterStatus || 'pending') === 'pending');
+    }
+    if (this.searchQuery) {
+      filtered = filtered.filter(c =>
+        c.name.toLowerCase().includes(this.searchQuery) ||
+        (c.description && c.description.toLowerCase().includes(this.searchQuery))
+      );
+    }
+    return filtered;
+  },
+
+  toggleBatchMode(enabled) {
+    this.batchMode = enabled !== undefined ? enabled : !this.batchMode;
+    this.selectedCampaigns.clear();
+    this.renderCampaigns();
+    const toolbar = document.getElementById('batch-toolbar');
+    if (toolbar) toolbar.style.display = this.batchMode ? 'flex' : 'none';
+    this.updateBatchToolbar();
+  },
+
+  toggleCampaignSelection(id) {
+    if (this.selectedCampaigns.has(id)) {
+      this.selectedCampaigns.delete(id);
+    } else {
+      this.selectedCampaigns.add(id);
+    }
+    // Update card visual
+    const card = document.querySelector(`[data-id="${id}"]`);
+    if (card) {
+      card.classList.toggle('selected', this.selectedCampaigns.has(id));
+      const checkbox = card.querySelector('.batch-checkbox');
+      if (checkbox) checkbox.checked = this.selectedCampaigns.has(id);
+    }
+    this.updateBatchToolbar();
+  },
+
+  batchSelectAll() {
+    const filtered = this.getFilteredCampaigns();
+    if (this.selectedCampaigns.size === filtered.length) {
+      this.selectedCampaigns.clear();
+    } else {
+      filtered.forEach(c => this.selectedCampaigns.add(c.id));
+    }
+    this.renderCampaigns();
+    this.updateBatchToolbar();
+  },
+
+  async batchDelete() {
+    const count = this.selectedCampaigns.size;
+    if (count === 0) return;
+    const choice = await this.showConfirm(
+      'Toplu Silme',
+      `${count} kampanyayı silmek istediğinize emin misiniz?`,
+      [
+        { label: 'İptal', class: 'btn-secondary', value: 'cancel' },
+        { label: `${count} Kampanyayı Sil`, class: 'btn-danger', value: 'delete' }
+      ]
+    );
+    if (choice !== 'delete') return;
+    this.campaigns = this.campaigns.filter(c => !this.selectedCampaigns.has(c.id));
+    this.selectedCampaigns.clear();
+    this.batchMode = false;
+    this.saveData();
+    this.renderDashboard();
+    this.renderCampaigns();
+    const toolbar = document.getElementById('batch-toolbar');
+    if (toolbar) toolbar.style.display = 'none';
+    this.showToast(`${count} kampanya silindi`, 'success');
+  },
+
+  updateBatchToolbar() {
+    const countEl = document.getElementById('batch-count');
+    if (countEl) countEl.textContent = this.selectedCampaigns.size;
+  },
+
+  renderCategoryChart() {
+    const container = document.getElementById('category-chart-content');
+    if (!container) return;
+    const counts = {};
+    const activeCampaigns = this.campaigns.filter(c => {
+      const s = this.getCampaignStatus(c);
+      return s === 'active' || s === 'ending';
+    });
+    activeCampaigns.forEach(c => {
+      const key = c.category || 'diger';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const max = Math.max(...Object.values(counts), 1);
+    if (Object.keys(counts).length === 0) {
+      container.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem">Aktif kampanya yok</p>';
+      return;
+    }
+    container.innerHTML = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([key, count]) => {
+        const cat = this.categories[key] || this.categories.diger;
+        const pct = Math.round((count / max) * 100);
+        return `<div class="chart-bar-row">
+          <span class="chart-bar-label">${cat.icon} ${cat.label}</span>
+          <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%;background:${cat.color}"></div></div>
+          <span class="chart-bar-value">${count}</span>
+        </div>`;
+      }).join('');
+  }
 };
 
 // --- Initialize ---

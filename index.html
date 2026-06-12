@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Süpermarket kampanyalarını kolayca takip edin. Başlangıç ve bitiş tarihlerini yönetin, hatırlatıcılar alın.">
   <meta name="theme-color" content="#0a0e1a">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -32,6 +32,9 @@
         </button>
       </div>
     </header>
+
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="offline-banner">📡 Çevrimdışı mod — Verileriniz güvende</div>
 
     <!-- ========== DASHBOARD VIEW ========== -->
     <main id="view-dashboard" class="view active">
@@ -124,6 +127,12 @@
             </div>
           </div>
         </section>
+
+        <!-- Kategori Dağılımı -->
+        <div id="dashboard-chart" class="dashboard-chart">
+          <div class="chart-title">📊 Kategori Dağılımı</div>
+          <div id="category-chart-content"></div>
+        </div>
       </div>
     </main>
 
@@ -156,22 +165,35 @@
           </select>
         </div>
 
-        <div class="sort-bar">
-          <label for="category-select">Kategori:</label>
-          <select id="category-select">
-            <option value="all">Tümü</option>
-            <option value="indirim">💰 İndirim</option>
-            <option value="xalxode">🎁 X Al X Öde</option>
-            <option value="hediye">🎀 Hediyeli</option>
-            <option value="ozel">⭐ Özel</option>
-            <option value="diger">📦 Diğer</option>
-          </select>
+        <div class="sort-bar" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <label for="category-select">Kategori:</label>
+            <select id="category-select">
+              <option value="all">Tümü</option>
+              <option value="indirim">💰 İndirim</option>
+              <option value="xalxode">🎁 X Al X Öde</option>
+              <option value="hediye">🎀 Hediyeli</option>
+              <option value="ozel">⭐ Özel</option>
+              <option value="diger">📦 Diğer</option>
+            </select>
+          </div>
+          <button type="button" id="btn-batch-toggle" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 0.78rem;">Toplu Seçim</button>
         </div>
 
         <!-- Poster Filter Banner (UX 1) -->
         <div id="poster-filter-banner" class="filter-banner hidden">
           <span>🔍 Afiş bekleyen kampanyalar gösteriliyor</span>
           <button type="button" id="poster-filter-clear" class="filter-banner-clear">✕ Temizle</button>
+        </div>
+
+        <!-- Batch Toolbar -->
+        <div id="batch-toolbar" class="batch-toolbar" style="display: none;">
+          <div><span id="batch-count">0</span> kampanya seçildi</div>
+          <div class="batch-toolbar-actions">
+            <button type="button" id="batch-select-all" class="btn btn-secondary btn-sm">Tümünü Seç</button>
+            <button type="button" id="batch-delete" class="btn btn-danger btn-sm">Seçilenleri Sil</button>
+            <button type="button" id="batch-cancel" class="btn btn-secondary btn-sm">İptal</button>
+          </div>
         </div>
 
         <div id="campaigns-list" class="campaign-list">
@@ -234,6 +256,16 @@
               <span class="toggle-slider"></span>
             </label>
           </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-label">Koyu Tema</span>
+              <span class="setting-desc">Açık/koyu tema arasında geçiş yapın</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-dark-theme" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
         </div>
 
         <div class="settings-group">
@@ -273,7 +305,7 @@
     </button>
 
     <!-- Bottom Navigation -->
-    <nav id="bottom-nav">
+    <nav id="bottom-nav" aria-label="Ana menü">
       <button class="nav-btn active" data-view="dashboard" id="nav-dashboard">
         <svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span class="nav-label">Panel</span>
@@ -290,7 +322,7 @@
   </div>
 
   <!-- ========== CAMPAIGN MODAL ========== -->
-  <div id="campaign-modal" class="modal-overlay">
+  <div id="campaign-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal">
       <div class="modal-header">
         <h2 id="modal-title">Yeni Kampanya</h2>
@@ -307,6 +339,10 @@
         <div class="form-group">
           <label for="input-description">Açıklama</label>
           <textarea id="input-description" rows="3" placeholder="Kampanya detaylarını yazın..." maxlength="500"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="input-notes">Notlar</label>
+          <textarea id="input-notes" rows="2" placeholder="Kampanya notları..." maxlength="500"></textarea>
         </div>
         <div class="form-group">
           <label for="input-category">Kategori</label>
@@ -355,10 +391,10 @@
   </div>
 
   <!-- ========== DELETE CONFIRM MODAL ========== -->
-  <div id="delete-modal" class="modal-overlay">
+  <div id="delete-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
     <div class="modal modal-sm">
       <div class="modal-header">
-        <h2>Kampanyayı Sil</h2>
+        <h2 id="delete-modal-title">Kampanyayı Sil</h2>
         <button class="modal-close btn-delete-cancel" aria-label="Kapat">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -375,7 +411,7 @@
   </div>
 
   <!-- ========== CUSTOM CONFIRM MODAL ========== -->
-  <div id="confirm-modal" class="modal-overlay">
+  <div id="confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
     <div class="modal modal-sm">
       <div class="modal-header">
         <h2 id="confirm-modal-title">Onay</h2>
@@ -392,8 +428,14 @@
     </div>
   </div>
 
+  <!-- SW Update Banner -->
+  <div id="sw-update-banner" class="sw-update-banner" style="display:none">
+    <span>🔄 Yeni sürüm mevcut!</span>
+    <button onclick="location.reload()">Güncelle</button>
+  </div>
+
   <!-- Toast Container -->
-  <div id="toast-container"></div>
+  <div id="toast-container" role="alert" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>

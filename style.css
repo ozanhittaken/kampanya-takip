@@ -18,8 +18,8 @@
   --border-focus: rgba(245, 158, 11, 0.5);
 
   --text-primary: #e6edf3;
-  --text-secondary: #8b949e;
-  --text-muted: #484f58;
+  --text-secondary: #9da5ae;
+  --text-muted: #7d8590;
   --text-accent: #f59e0b;
 
   --accent: #f59e0b;
@@ -257,8 +257,6 @@ body::before {
   align-items: center;
   gap: 14px;
   transition: var(--transition);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   cursor: default;
 }
 
@@ -399,8 +397,6 @@ body::before {
   border-radius: var(--radius);
   padding: 16px;
   transition: var(--transition);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   position: relative;
   overflow: hidden;
   animation: cardSlideIn 0.3s ease forwards;
@@ -604,8 +600,6 @@ body::before {
   font-family: var(--font);
   transition: var(--transition);
   outline: none;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 #search-input::placeholder {
@@ -716,7 +710,7 @@ body::before {
 
 .filter-btn.active {
   background: var(--accent);
-  color: #000;
+  color: #1a1a2e;
   border-color: var(--accent);
   font-weight: 600;
 }
@@ -853,7 +847,7 @@ body::before {
 }
 
 .nav-label {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.02em;
 }
@@ -1101,8 +1095,6 @@ body::before {
   border-radius: var(--radius);
   padding: 4px 0;
   margin-bottom: 16px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   overflow: hidden;
 }
 
@@ -1456,4 +1448,240 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--status-active);
   background: var(--status-active-bg);
   border-color: var(--status-active-border);
+}
+
+/* Campaign Progress Bar */
+.campaign-progress {
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+  position: relative;
+}
+.campaign-progress-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+  background: var(--accent);
+}
+.campaign-progress-bar.progress-ending {
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+}
+.campaign-progress-bar.progress-expired {
+  background: var(--text-muted);
+}
+.campaign-progress-text {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  text-align: right;
+}
+
+/* Filter Tab Badge */
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.1);
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 4px;
+  line-height: 1;
+}
+.filter-btn.active .filter-badge {
+  background: rgba(0,0,0,0.2);
+  color: inherit;
+}
+
+/* Offline Banner */
+.offline-banner {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  padding: 8px 16px;
+  background: rgba(239, 68, 68, 0.9);
+  color: #fff;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+.offline-banner.visible {
+  transform: translateY(0);
+}
+
+/* Light Theme */
+.light-theme {
+  --bg-primary: #f0f2f5;
+  --bg-secondary: #e4e6eb;
+  --bg-card: rgba(255,255,255,0.9);
+  --bg-card-hover: rgba(255,255,255,1);
+  --text-primary: #1c1e21;
+  --text-secondary: #606770;
+  --text-muted: #8a8d91;
+  --border-color: rgba(0,0,0,0.1);
+  --border-focus: rgba(245,158,11,0.5);
+  --accent-glow: rgba(245,158,11,0.15);
+}
+.light-theme body::before {
+  background: radial-gradient(ellipse at top, rgba(245,158,11,0.05), transparent 60%);
+}
+
+/* Campaign Notes */
+.campaign-notes {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.04);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  white-space: pre-line;
+}
+
+/* Batch Selection */
+.batch-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  background: rgba(99,102,241,0.12);
+  border: 1px solid rgba(99,102,241,0.3);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  animation: viewFadeIn 0.3s ease;
+}
+.batch-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+.batch-toolbar .btn-sm {
+  padding: 4px 12px;
+  font-size: 0.78rem;
+}
+.campaign-card .batch-checkbox {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  z-index: 2;
+}
+.campaign-card.batch-mode {
+  padding-left: 40px;
+}
+.campaign-card.selected {
+  border-color: rgba(99,102,241,0.5);
+  background: rgba(99,102,241,0.05);
+}
+
+/* SW Update Banner */
+.sw-update-banner {
+  position: fixed;
+  bottom: 80px;
+  left: 16px;
+  right: 16px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(99,102,241,0.95);
+  color: #fff;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: toastSlideIn 0.4s ease;
+}
+.sw-update-banner button {
+  background: #fff;
+  color: #4f46e5;
+  border: none;
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Dashboard Charts */
+.dashboard-chart {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+.chart-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+.chart-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.chart-bar-label {
+  width: 80px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-align: right;
+  flex-shrink: 0;
+}
+.chart-bar-track {
+  flex: 1;
+  height: 20px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.chart-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease;
+  min-width: 2px;
+}
+.chart-bar-value {
+  width: 30px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+#input-notes {
+  min-height: 60px;
+  resize: vertical;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
