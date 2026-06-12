@@ -1142,36 +1142,69 @@ const app = {
 
     // Dimensions
     const width = 800;
-    const headerHeight = 140;
-    const itemHeight = 110;
+    const headerHeight = 150;
+    const itemHeight = 130;
     const footerHeight = 80;
     const height = headerHeight + (active.length * itemHeight) + footerHeight;
 
     canvas.width = width;
     canvas.height = height;
 
-    // Draw background (premium dark gradient)
+    // Draw background (premium light theme gradient)
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, '#0f172a');
-    gradient.addColorStop(1, '#020617');
+    gradient.addColorStop(0, '#f8fafc');
+    gradient.addColorStop(1, '#f1f5f9');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
+
+    // Top Brand Bar (Corewish blue)
+    ctx.fillStyle = '#2563eb';
+    ctx.fillRect(0, 0, width, 6);
 
     // Font stack styling
     const fontStack = "'-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
     const fontTitle = `bold 32px 'Inter', ${fontStack}`;
     const fontSubtitle = `16px 'Inter', ${fontStack}`;
-    const fontCardTitle = `bold 20px 'Inter', ${fontStack}`;
+    const fontCardTitle = `bold 18px 'Inter', ${fontStack}`;
     const fontCardDate = `14px 'Inter', ${fontStack}`;
     const fontBadge = `bold 12px 'Inter', ${fontStack}`;
     const fontFooter = `italic 14px 'Inter', ${fontStack}`;
 
+    // Helper function to wrap text inside canvas
+    const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
+      const words = text.split(' ');
+      let line = '';
+      const lines = [];
+
+      for (let n = 0; n < words.length; n++) {
+        let testLine = line + words[n] + ' ';
+        let metrics = context.measureText(testLine);
+        let testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+          lines.push(line.trim());
+          line = words[n] + ' ';
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line.trim());
+      
+      const linesToDraw = lines.slice(0, 2);
+      linesToDraw.forEach((lineText, idx) => {
+        let displayText = lineText;
+        if (idx === 1 && lines.length > 2) {
+          displayText = lineText.substring(0, lineText.length - 3) + '...';
+        }
+        context.fillText(displayText, x, y + (idx * lineHeight));
+      });
+    };
+
     // Draw header title
     ctx.font = fontTitle;
-    ctx.fillStyle = '#f59e0b';
+    ctx.fillStyle = '#0f172a';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('🎯 AKTİF KAMPANYALARIMIZ', 50, 40);
+    ctx.fillText('📋 AKTİF KAMPANYALARIMIZ', 50, 45);
 
     // Draw subtitle with date
     const dateStr = new Date().toLocaleDateString('tr-TR', {
@@ -1180,14 +1213,14 @@ const app = {
       year: 'numeric'
     });
     ctx.font = fontSubtitle;
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillText(`Tarih: ${dateStr}  |  Toplam: ${active.length} Kampanya`, 50, 85);
+    ctx.fillStyle = '#475569';
+    ctx.fillText(`Tarih: ${dateStr}  |  Toplam: ${active.length} Kampanya`, 50, 92);
 
     // Draw header separator line
     ctx.beginPath();
-    ctx.moveTo(50, 120);
-    ctx.lineTo(750, 120);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.moveTo(50, 130);
+    ctx.lineTo(750, 130);
+    ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -1195,50 +1228,73 @@ const app = {
     active.forEach((campaign, i) => {
       const cardY = headerHeight + (i * itemHeight);
       
-      // Card background
+      // 1. Card background with soft shadow
+      ctx.save();
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.04)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 4;
       ctx.beginPath();
-      ctx.roundRect(50, cardY, 700, 90, 14);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      ctx.roundRect(50, cardY, 700, 110, 10);
+      ctx.fillStyle = '#ffffff';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.restore();
+
+      // 2. Left brand accent bar (clipped to rounded corner)
+      const status = this.getCampaignStatus(campaign);
+      let accentColor = '#3b82f6'; // Active (blue)
+      if (status === 'ending') {
+        accentColor = '#f97316'; // Ending (orange)
+      }
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(50, cardY, 700, 110, 10);
+      ctx.clip();
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(50, cardY, 6, 110);
+      ctx.restore();
+
+      // 3. Card border
+      ctx.beginPath();
+      ctx.roundRect(50, cardY, 700, 110, 10);
+      ctx.strokeStyle = '#e2e8f0';
       ctx.lineWidth = 1;
       ctx.stroke();
 
       // Category config
       const cat = this.categories[campaign.category] || this.categories.diger;
 
-      // Draw name (limit length to prevent overflowing)
+      // Draw campaign name (wrapped dynamically up to 2 lines)
       ctx.font = fontCardTitle;
-      ctx.fillStyle = '#f8fafc';
+      ctx.fillStyle = '#0f172a';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      const truncatedName = this.truncateText(`${cat.icon} ${campaign.name}`, 35);
-      ctx.fillText(truncatedName, 75, cardY + 20);
+      const fullTitleText = `${cat.icon} ${campaign.name}`;
+      wrapText(ctx, fullTitleText, 75, cardY + 18, 450, 24);
 
       // Draw date range
       ctx.font = fontCardDate;
       ctx.fillStyle = '#64748b';
       const startFormatted = new Date(campaign.startDate).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
       const endFormatted = new Date(campaign.endDate).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      ctx.fillText(`📅 ${startFormatted} - ${endFormatted}`, 75, cardY + 54);
+      ctx.fillText(`📅 ${startFormatted} - ${endFormatted}`, 75, cardY + 74);
 
       // Draw countdown badge
-      const status = this.getCampaignStatus(campaign);
       const countdown = this.getCountdownText(campaign);
       
-      let badgeColor = '#2dd4bf'; // Active (teal)
-      let badgeBg = 'rgba(45, 212, 191, 0.08)';
-      let badgeBorder = 'rgba(45, 212, 191, 0.2)';
+      let badgeColor = '#1e40af'; // Active
+      let badgeBg = '#eff6ff';
+      let badgeBorder = '#dbeafe';
       
       if (status === 'ending') {
-        badgeColor = '#fb923c'; // Ending (orange)
-        badgeBg = 'rgba(251, 146, 60, 0.08)';
-        badgeBorder = 'rgba(251, 146, 60, 0.2)';
+        badgeColor = '#c2410c'; // Ending
+        badgeBg = '#fff7ed';
+        badgeBorder = '#ffedd5';
       }
 
       // Badge rounded box
       ctx.beginPath();
-      ctx.roundRect(530, cardY + 29, 190, 32, 8);
+      ctx.roundRect(540, cardY + 39, 180, 32, 6);
       ctx.fillStyle = badgeBg;
       ctx.fill();
       ctx.strokeStyle = badgeBorder;
@@ -1250,13 +1306,13 @@ const app = {
       ctx.fillStyle = badgeColor;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(countdown, 530 + 95, cardY + 29 + 16);
+      ctx.fillText(countdown, 540 + 90, cardY + 39 + 16);
     });
 
     // Draw footer text
-    const footerY = height - 50;
+    const footerY = height - 45;
     ctx.font = fontFooter;
-    ctx.fillStyle = '#475569';
+    ctx.fillStyle = '#64748b';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText('KampanyaTakip uygulaması ile hazırlanmıştır.', width / 2, footerY);
