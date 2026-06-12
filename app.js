@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v34)',
+    version: '1.0.0 (v35)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -1573,33 +1573,6 @@ const app = {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    // Polyfill roundRect for older browsers/devices
-    if (!ctx.roundRect) {
-      ctx.roundRect = function (x, y, w, h, r) {
-        if (typeof r === 'number') {
-          r = [r, r, r, r];
-        } else if (Array.isArray(r)) {
-          if (r.length === 1) r = [r[0], r[0], r[0], r[0]];
-          else if (r.length === 2) r = [r[0], r[1], r[0], r[1]];
-          else if (r.length === 3) r = [r[0], r[1], r[2], r[1]];
-        } else {
-          r = [0, 0, 0, 0];
-        }
-        const [tl, tr, br, bl] = r;
-        this.moveTo(x + tl, y);
-        this.lineTo(x + w - tr, y);
-        this.quadraticCurveTo(x + w, y, x + w, y + tr);
-        this.lineTo(x + w, y + h - br);
-        this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
-        this.lineTo(x + bl, y + h);
-        this.quadraticCurveTo(x, y + h, x, y + h - bl);
-        this.lineTo(x, y + tl);
-        this.quadraticCurveTo(x, y, x + tl, y);
-        this.closePath();
-        return this;
-      };
-    }
-
     // Dimensions
     const baseWidth = 800;
     const headerHeight = 105;
@@ -1623,7 +1596,7 @@ const app = {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, baseWidth, baseHeight);
 
-    // Top Brand Bar (Corewish blue)
+    // Bottom brand bar
     ctx.fillStyle = '#2563eb';
     ctx.fillRect(0, 0, baseWidth, 6);
 
@@ -1692,8 +1665,7 @@ const app = {
       ctx.shadowColor = 'rgba(15, 23, 42, 0.04)';
       ctx.shadowBlur = 8;
       ctx.shadowOffsetY = 4;
-      ctx.beginPath();
-      ctx.roundRect(50, cardY, 700, 110, 10);
+      this.defineRoundedRectPath(ctx, 50, cardY, 700, 110, 10);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
       ctx.restore();
@@ -1706,16 +1678,14 @@ const app = {
       }
 
       ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(50, cardY, 700, 110, 10);
+      this.defineRoundedRectPath(ctx, 50, cardY, 700, 110, 10);
       ctx.clip();
       ctx.fillStyle = accentColor;
       ctx.fillRect(50, cardY, 6, 110);
       ctx.restore();
 
       // 3. Card border
-      ctx.beginPath();
-      ctx.roundRect(50, cardY, 700, 110, 10);
+      this.defineRoundedRectPath(ctx, 50, cardY, 700, 110, 10);
       ctx.strokeStyle = '#e2e8f0';
       ctx.lineWidth = 1;
       ctx.stroke();
@@ -1754,8 +1724,7 @@ const app = {
       }
 
       // Badge rounded box
-      ctx.beginPath();
-      ctx.roundRect(540, cardY + 39, 180, 32, 6);
+      this.defineRoundedRectPath(ctx, 540, cardY + 39, 180, 32, 6);
       ctx.fillStyle = badgeBg;
       ctx.fill();
       ctx.strokeStyle = badgeBorder;
@@ -1840,7 +1809,7 @@ const app = {
     overlay.style.zIndex = '300';
 
     overlay.innerHTML = `
-      <div class="modal modal-sm" style="max-width: 90%; width: 450px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius);">
+      <div class="modal modal-sm" style="max-width: 90%; width: 450px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius); transform: none !important;">
         <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
           <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0;">Görsel Paylaş / Kaydet</h2>
           <button id="btn-share-modal-close" class="modal-close" aria-label="Kapat" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center;">
@@ -1886,7 +1855,7 @@ const app = {
     document.getElementById('btn-share-whatsapp').addEventListener('click', async () => {
       if (navigator.clipboard && window.ClipboardItem && file) {
         try {
-          const item = new ClipboardItem({ [file.type]: file });
+          const item = new window.ClipboardItem({ [file.type]: file });
           await navigator.clipboard.write([item]);
           this.showToast('Görsel panoya kopyalandı! WhatsApp\'ta doğrudan yapıştırabilirsiniz.', 'success');
         } catch (err) {
@@ -1904,6 +1873,20 @@ const app = {
       }
       close();
     });
+  },
+
+  defineRoundedRectPath(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
   },
 
   dataURLtoFile(dataurl, filename) {
