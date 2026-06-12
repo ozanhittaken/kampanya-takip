@@ -1113,6 +1113,33 @@ const app = {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
+    // Polyfill roundRect for older browsers/devices
+    if (!ctx.roundRect) {
+      ctx.roundRect = function (x, y, w, h, r) {
+        if (typeof r === 'number') {
+          r = [r, r, r, r];
+        } else if (Array.isArray(r)) {
+          if (r.length === 1) r = [r[0], r[0], r[0], r[0]];
+          else if (r.length === 2) r = [r[0], r[1], r[0], r[1]];
+          else if (r.length === 3) r = [r[0], r[1], r[2], r[1]];
+        } else {
+          r = [0, 0, 0, 0];
+        }
+        const [tl, tr, br, bl] = r;
+        this.moveTo(x + tl, y);
+        this.lineTo(x + w - tr, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + tr);
+        this.lineTo(x + w, y + h - br);
+        this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+        this.lineTo(x + bl, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - bl);
+        this.lineTo(x, y + tl);
+        this.quadraticCurveTo(x, y, x + tl, y);
+        this.closePath();
+        return this;
+      };
+    }
+
     // Dimensions
     const width = 800;
     const headerHeight = 140;
@@ -1130,8 +1157,17 @@ const app = {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
+    // Font stack styling
+    const fontStack = "'-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+    const fontTitle = `bold 32px 'Inter', ${fontStack}`;
+    const fontSubtitle = `16px 'Inter', ${fontStack}`;
+    const fontCardTitle = `bold 20px 'Inter', ${fontStack}`;
+    const fontCardDate = `14px 'Inter', ${fontStack}`;
+    const fontBadge = `bold 12px 'Inter', ${fontStack}`;
+    const fontFooter = `italic 14px 'Inter', ${fontStack}`;
+
     // Draw header title
-    ctx.font = 'bold 34px sans-serif';
+    ctx.font = fontTitle;
     ctx.fillStyle = '#f59e0b';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
@@ -1143,7 +1179,7 @@ const app = {
       month: 'long',
       year: 'numeric'
     });
-    ctx.font = '18px sans-serif';
+    ctx.font = fontSubtitle;
     ctx.fillStyle = '#94a3b8';
     ctx.fillText(`Tarih: ${dateStr}  |  Toplam: ${active.length} Kampanya`, 50, 85);
 
@@ -1172,7 +1208,7 @@ const app = {
       const cat = this.categories[campaign.category] || this.categories.diger;
 
       // Draw name (limit length to prevent overflowing)
-      ctx.font = 'bold 22px sans-serif';
+      ctx.font = fontCardTitle;
       ctx.fillStyle = '#f8fafc';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
@@ -1180,7 +1216,7 @@ const app = {
       ctx.fillText(truncatedName, 75, cardY + 20);
 
       // Draw date range
-      ctx.font = '15px sans-serif';
+      ctx.font = fontCardDate;
       ctx.fillStyle = '#64748b';
       const startFormatted = new Date(campaign.startDate).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
       const endFormatted = new Date(campaign.endDate).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -1210,7 +1246,7 @@ const app = {
       ctx.stroke();
 
       // Badge text
-      ctx.font = 'bold 13px sans-serif';
+      ctx.font = fontBadge;
       ctx.fillStyle = badgeColor;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -1219,7 +1255,7 @@ const app = {
 
     // Draw footer text
     const footerY = height - 50;
-    ctx.font = 'italic 15px sans-serif';
+    ctx.font = fontFooter;
     ctx.fillStyle = '#475569';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -1243,30 +1279,52 @@ const app = {
           });
           this.showToast('Kampanyalar başarıyla paylaşıldı!', 'success');
         } else {
-          this.downloadImageFallback(canvas);
+          this.downloadImageFallback(canvas, blob);
         }
       } catch (err) {
         if (err.name !== 'AbortError') {
           console.error('Paylaşım hatası:', err);
-          this.downloadImageFallback(canvas);
+          this.downloadImageFallback(canvas, blob);
         }
       }
     }, 'image/png');
   },
 
-  downloadImageFallback(canvas) {
-    try {
-      const url = canvas.toDataURL('image/png');
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `aktif-kampanyalar-${this.getTodayStr()}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      this.showToast('Görsel cihazınıza indirildi! WhatsApp veya diğer kanallardan gönderebilirsiniz.', 'info');
-    } catch (e) {
-      console.error('Görsel indirme hatası:', e);
-      this.showToast('Görsel indirilemedi.', 'error');
+  downloadImageFallback(canvas, blob) {
+    const triggerDownload = () => {
+      try {
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `aktif-kampanyalar-${this.getTodayStr()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        this.showToast('Görsel indirildi! WhatsApp veya başka bir sohbete gönderebilirsiniz.', 'info');
+      } catch (e) {
+        console.error('Görsel indirme hatası:', e);
+        this.showToast('Görsel indirilemedi.', 'error');
+      }
+    };
+
+    // Try copying to clipboard first (ideal fallback on desktop so user can Ctrl+V in WhatsApp)
+    if (navigator.clipboard && window.ClipboardItem && blob) {
+      const item = new ClipboardItem({ [blob.type]: blob });
+      navigator.clipboard.write([item])
+        .then(() => {
+          this.showToast('Görsel panoya kopyalandı ve indiriliyor! WhatsApp açılıyor, doğrudan yapıştırabilirsiniz (Ctrl+V).', 'success');
+          triggerDownload();
+          // Open WhatsApp API to let them choose chat to paste in
+          setTimeout(() => {
+            window.open('https://api.whatsapp.com/send', '_blank');
+          }, 1500);
+        })
+        .catch(err => {
+          console.warn('Panoya kopyalama başarısız, sadece indiriliyor:', err);
+          triggerDownload();
+        });
+    } else {
+      triggerDownload();
     }
   },
 
