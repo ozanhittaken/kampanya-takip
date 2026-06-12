@@ -1151,9 +1151,9 @@ const app = {
 
     // Dimensions
     const width = 800;
-    const headerHeight = 135;
+    const headerHeight = 105;
     const itemHeight = 130;
-    const footerHeight = 80;
+    const footerHeight = 30;
     const height = headerHeight + (active.length * itemHeight) + footerHeight;
 
     canvas.width = width;
@@ -1172,12 +1172,10 @@ const app = {
 
     // Font stack styling
     const fontStack = "'-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
-    const fontTitle = `bold 24px 'Inter', ${fontStack}`;
-    const fontSubtitle = `15px 'Inter', ${fontStack}`;
+    const fontSubtitle = `bold 16px 'Inter', ${fontStack}`;
     const fontCardTitle = `bold 18px 'Inter', ${fontStack}`;
     const fontCardDate = `14px 'Inter', ${fontStack}`;
     const fontBadge = `bold 12px 'Inter', ${fontStack}`;
-    const fontFooter = `italic 14px 'Inter', ${fontStack}`;
 
     // Helper function to wrap text inside canvas (supports up to 3 lines for long campaign names)
     const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
@@ -1208,67 +1206,22 @@ const app = {
       });
     };
 
-    // Draw Corewish-style brand logo icon
-    ctx.save();
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.arc(70, 65, 20, 0, Math.PI * 2);
-    ctx.fill();
-
-    // White smile arc
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3.5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.arc(70, 65, 10, 0.15 * Math.PI, 0.85 * Math.PI);
-    ctx.stroke();
-
-    // White dot
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(70, 56, 3.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // Draw Corewish Asset Brand Text (Left)
-    ctx.font = fontTitle;
+    // Draw Date & Count on the left (clean minimalist style)
+    ctx.font = fontSubtitle;
     ctx.fillStyle = '#0f172a';
     ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('Corewish', 105, 66);
-
-    ctx.fillStyle = '#2563eb';
-    ctx.fillText('Asset', 215, 66);
-
-    // Separator line
-    ctx.beginPath();
-    ctx.moveTo(290, 48);
-    ctx.lineTo(290, 82);
-    ctx.strokeStyle = '#cbd5e1';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // App title
-    ctx.font = `500 18px 'Inter', ${fontStack}`;
-    ctx.fillStyle = '#64748b';
-    ctx.fillText('Kampanya Takip', 305, 67);
-
-    // Date & Count on the right (Right aligned)
-    ctx.font = fontSubtitle;
-    ctx.fillStyle = '#64748b';
-    ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     const dateStr = new Date().toLocaleDateString('tr-TR', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
-    ctx.fillText(`${dateStr}  |  Toplam: ${active.length} Aktif`, 750, 67);
+    ctx.fillText(`📅 ${dateStr}  |  Toplam: ${active.length} Aktif Kampanya`, 50, 50);
 
     // Draw header separator line
     ctx.beginPath();
-    ctx.moveTo(50, 115);
-    ctx.lineTo(750, 115);
+    ctx.moveTo(50, 85);
+    ctx.lineTo(750, 85);
     ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 1;
     ctx.stroke();
@@ -1357,14 +1310,6 @@ const app = {
       ctx.textBaseline = 'middle';
       ctx.fillText(countdown, 540 + 90, cardY + 39 + 16);
     });
-
-    // Draw footer text
-    const footerY = height - 45;
-    ctx.font = fontFooter;
-    ctx.fillStyle = '#64748b';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText('KampanyaTakip uygulaması ile hazırlanmıştır.', width / 2, footerY);
 
     // Convert canvas synchronously to data URL and File
     try {
