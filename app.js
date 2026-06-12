@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v32)',
+    version: '1.0.0 (v33)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -1799,12 +1799,13 @@ const app = {
 
   async executeShareFallback(canvas, file) {
     let downloaded = false;
+    let dataUrl = '';
 
     // 1. Trigger Download synchronously
     try {
-      const url = canvas.toDataURL('image/png');
+      dataUrl = canvas.toDataURL('image/png');
       const a = document.createElement('a');
-      a.href = url;
+      a.href = dataUrl;
       a.download = `aktif-kampanyalar-${this.getTodayStr()}.png`;
       document.body.appendChild(a);
       a.click();
@@ -1814,41 +1815,93 @@ const app = {
       console.error('Görsel indirme hatası:', e);
     }
 
-    // 2. Ask user before opening WhatsApp
-    const choice = await this.showConfirm(
-      'Görsel İndirildi',
-      'Aktif kampanyalar görseli cihazınıza indirildi. WhatsApp üzerinden paylaşmak istiyor musunuz?',
-      [
-        { label: 'Kapat', class: 'btn-secondary', value: 'close' },
-        { label: 'WhatsApp Paylaş', class: 'btn-primary', value: 'whatsapp' }
-      ]
-    );
+    if (!dataUrl) {
+      try {
+        dataUrl = canvas.toDataURL('image/png');
+      } catch (e) {
+        console.error('DataURL oluşturulamadı:', e);
+      }
+    }
 
-    if (choice === 'whatsapp') {
-      // 3. Önce panoya kopyala, sonra WhatsApp aç
+    // 2. Show the custom image sharing modal (bulletproof fallback for mobile & iOS)
+    this.showImageShareModal(dataUrl, file);
+  },
+
+  showImageShareModal(dataUrl, file) {
+    // Remove existing modal if any
+    const existing = document.getElementById('share-image-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'share-image-modal';
+    overlay.className = 'modal-overlay active';
+    overlay.style.zIndex = '300';
+
+    overlay.innerHTML = `
+      <div class="modal modal-sm" style="max-width: 90%; width: 450px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius);">
+        <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0;">Görsel Paylaş / Kaydet</h2>
+          <button id="btn-share-modal-close" class="modal-close" aria-label="Kapat" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body" style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 0;">
+          <p style="font-size: 0.84rem; text-align: center; color: var(--text-secondary); margin: 0; line-height: 1.4;">
+            Görseli galerinize kaydetmek veya paylaşmak için üzerine <strong>basılı tutun</strong> (veya sağ tıklayıp resmi kaydedin).
+          </p>
+          <div style="width: 100%; max-height: 250px; overflow-y: auto; border-radius: var(--radius-xs); border: 1px solid var(--border-color); background: #06080f; display: flex; align-items: center; justify-content: center; padding: 8px;">
+            <img src="${dataUrl}" alt="Kampanyalar" style="max-width: 100%; max-height: 230px; object-fit: contain; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top: 10px; display: flex; gap: 8px; justify-content: flex-end;">
+          <button type="button" id="btn-share-whatsapp" class="btn btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; font-weight: 600; font-size: 0.88rem;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:#25D366;fill:none;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            WhatsApp'ta Paylaş
+          </button>
+          <button type="button" id="btn-share-close" class="btn btn-secondary" style="padding: 10px 16px; font-weight: 600; font-size: 0.88rem;">Kapat</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const close = () => {
+      overlay.remove();
+      document.removeEventListener('keydown', escClose);
+    };
+
+    const escClose = (e) => {
+      if (e.key === 'Escape') close();
+    };
+
+    document.addEventListener('keydown', escClose);
+    document.getElementById('btn-share-modal-close').addEventListener('click', close);
+    document.getElementById('btn-share-close').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close();
+    });
+
+    document.getElementById('btn-share-whatsapp').addEventListener('click', async () => {
       if (navigator.clipboard && window.ClipboardItem && file) {
         try {
           const item = new ClipboardItem({ [file.type]: file });
           await navigator.clipboard.write([item]);
-          this.showToast('Görsel panoya kopyalandı! WhatsApp\'ta doğrudan yapıştırabilirsiniz (Ctrl+V).', 'success');
+          this.showToast('Görsel panoya kopyalandı! WhatsApp\'ta doğrudan yapıştırabilirsiniz.', 'success');
         } catch (err) {
           console.warn('Panoya kopyalama başarısız:', err);
           this.showToast('İndirdiğiniz görseli WhatsApp\'ta ekleyerek gönderebilirsiniz.', 'info');
         }
       } else {
-        this.showToast('İndirdiğiniz görseli WhatsApp\'ta ekleyerek gönderebilirsiniz.', 'info');
+        this.showToast('Görsel kopyalanamadı, galerinizden seçerek paylaşabilirsiniz.', 'info');
       }
-      // Clipboard işlemi bittikten sonra WhatsApp aç
+      
       try {
         window.open('https://api.whatsapp.com/send', '_blank');
       } catch (e) {
         console.error('WhatsApp açılırken hata:', e);
       }
-    } else {
-      if (downloaded) {
-        this.showToast('Görsel indirildi.', 'success');
-      }
-    }
+      close();
+    });
   },
 
   dataURLtoFile(dataurl, filename) {
