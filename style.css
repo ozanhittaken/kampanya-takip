@@ -852,6 +852,40 @@ body::before {
   letter-spacing: 0.02em;
 }
 
+/* Middle Nav Add Button */
+.nav-add-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  color: var(--text-secondary);
+}
+.nav-add-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1a1a2e;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  transition: var(--transition-bounce);
+}
+.nav-add-btn:hover .nav-add-icon-wrap {
+  transform: scale(1.08) rotate(90deg);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.45);
+}
+.nav-add-btn:active .nav-add-icon-wrap {
+  transform: scale(0.95);
+}
+
 /* --- Modal --- */
 .modal-overlay {
   position: fixed;
