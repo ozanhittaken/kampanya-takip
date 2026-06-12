@@ -14,7 +14,7 @@ const app = {
   posterFilter: 'all',
   currentCategory: 'all',
   config: {
-    version: '1.0.0 (v18)',
+    version: '1.0.0 (v19)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -372,8 +372,16 @@ const app = {
   renderDashboard() {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekEnd = new Date(today);
-    weekEnd.setDate(weekEnd.getDate() + 7);
+    // Haftanın sınırları: Pazartesi–Pazar
+    const dayOfWeek = today.getDay(); // 0=Pazar, 1=Pazartesi, ..., 6=Cumartesi
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() + diffToMonday);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6); // Pazar
+    // Yarın (bitimine 1 gün kalan kampanyalar için)
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
     let activeCount = 0;
     let startingTodayCount = 0;
@@ -405,11 +413,13 @@ const app = {
         if (!todayCampaigns.includes(c)) todayCampaigns.push(c);
       }
 
-      if (endDay >= today && endDay <= weekEnd && status !== 'expired') {
+      if (endDay >= weekStart && endDay <= weekEnd && status !== 'expired') {
         endingWeekCount++;
-        if (endDay.getTime() !== today.getTime()) {
-          endingSoon.push(c);
-        }
+      }
+
+      // Yakında Bitenler: bitimine 1 gün kalan (yarın biten) kampanyalar
+      if (endDay.getTime() === tomorrow.getTime() && status !== 'expired') {
+        endingSoon.push(c);
       }
     });
 
@@ -450,7 +460,7 @@ const app = {
       endingContainer.innerHTML = `
         <div class="empty-state">
           <span class="empty-icon">✅</span>
-          <p>Yakında biten kampanya yok</p>
+          <p>Yarın biten kampanya yok</p>
         </div>`;
     } else {
       endingContainer.innerHTML = endingSoon.slice(0, 5).map((c, i) => this.renderCampaignCard(c, i)).join('');
