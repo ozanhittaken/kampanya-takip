@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v37)',
+    version: '1.0.0 (v38)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -1107,7 +1107,7 @@ const app = {
           window.location.reload();
         });
 
-        const registration = await navigator.serviceWorker.register('sw.js');
+        const registration = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
         console.log('Service Worker registered successfully:', registration);
         this.updateNotificationUI();
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kampanya-takip-v37';
+const CACHE_NAME = 'kampanya-takip-v38';
 const ASSETS = [
   './',
   './index.html',
@@ -51,32 +51,37 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Network-first strategy with same-origin filter
+// Fetch: Network-first strategy with same-origin filter and HTTP cache bypass
 self.addEventListener('fetch', (event) => {
-  // Only cache same-origin requests
+  const isGet = event.request.method === 'GET';
   const isSameOrigin = event.request.url.startsWith(self.location.origin);
   
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Cache only same-origin successful responses
-        if (response.ok && isSameOrigin) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      })
-      .catch(() => {
-        // Offline fallback
-        return caches.match(event.request).then(cached => {
-          // SPA navigation fallback — if no cache hit for a navigation request, serve index.html
-          if (!cached && event.request.mode === 'navigate') {
-            return caches.match('./index.html');
+  if (isGet && isSameOrigin) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-cache' })
+        .then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
           }
-          return cached;
-        });
-      })
-  );
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then(cached => {
+            if (!cached && event.request.mode === 'navigate') {
+              return caches.match('./index.html');
+            }
+            return cached;
+          });
+        })
+    );
+  } else {
+    // Default fetch strategy for POST, cross-origin, etc.
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => caches.match(event.request))
+    );
+  }
 });
 
 // Handle notification clicks
