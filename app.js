@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v24)',
+    version: '1.0.0 (v25)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -53,21 +53,6 @@ const app = {
     this.startNotificationChecker();
     this.registerServiceWorker();
     this.applySettings();
-
-    // Online/Offline banner
-    window.addEventListener('offline', () => {
-      const banner = document.getElementById('offline-banner');
-      if (banner) banner.classList.add('visible');
-    });
-    window.addEventListener('online', () => {
-      const banner = document.getElementById('offline-banner');
-      if (banner) banner.classList.remove('visible');
-    });
-    // Check initial state
-    if (!navigator.onLine) {
-      const banner = document.getElementById('offline-banner');
-      if (banner) banner.classList.add('visible');
-    }
 
     // Page Visibility API to save battery/resources
     document.addEventListener('visibilitychange', () => {
