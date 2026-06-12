@@ -1023,19 +1023,15 @@ const app = {
     const campaign = this.campaigns.find(c => c.id === id);
     if (!campaign) return;
 
-    const cat = this.categories[campaign.category] || this.categories.diger;
+    // Format the simple text template for the Graphic request "afiş içeriği" field
+    const endDateObj = new Date(campaign.endDate);
+    const dateFormatted = endDateObj.toLocaleDateString('tr-TR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
     
-    // Format a beautiful text template
-    const textTemplate = `📋 KAMPANYA GÖRSEL AFİŞ TALEBİ
-
-Kampanya Adı: ${campaign.name}
-Kategori: ${cat.label}
-Başlangıç Tarihi: ${this.formatDateLong(campaign.startDate)}
-Bitiş Tarihi: ${this.formatDateLong(campaign.endDate)}
-Detaylar & Açıklama: ${campaign.description || 'Belirtilmedi'}
-
--- 
-KampanyaTakip üzerinden otomatik oluşturuldu.`;
+    const textTemplate = `${campaign.name} - Son Gün: ${dateFormatted}`;
 
     // Automatically mark as created when request is initiated
     campaign.demandStatus = 'created';
@@ -1047,7 +1043,7 @@ KampanyaTakip üzerinden otomatik oluşturuldu.`;
     // Try to copy to clipboard
     navigator.clipboard.writeText(textTemplate)
       .then(() => {
-        this.showToast('Talep oluşturuldu! Detaylar kopyalandı ve form açılıyor...', 'success');
+        this.showToast('Kampanya içeriği panoya kopyalandı! Talep formundaki "Afiş İçeriği" alanına yapıştırabilirsiniz.', 'success');
       })
       .catch((err) => {
         console.error('Kopyalama hatası:', err);
