@@ -1261,71 +1261,93 @@ const app = {
     ctx.textBaseline = 'top';
     ctx.fillText('KampanyaTakip uygulaması ile hazırlanmıştır.', width / 2, footerY);
 
-    // Convert to blob and share
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        this.showToast('Görsel oluşturulamadı', 'error');
-        return;
-      }
+    // Convert canvas synchronously to data URL and File
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+      const file = this.dataURLtoFile(dataUrl, 'aktif-kampanyalar.png');
 
-      try {
-        const file = new File([blob], 'aktif-kampanyalar.png', { type: 'image/png' });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: 'Aktif Kampanyalar',
-            text: 'Aktif kampanyalarımız ekteki görseldedir.'
-          });
-          this.showToast('Kampanyalar başarıyla paylaşıldı!', 'success');
-        } else {
-          this.downloadImageFallback(canvas, blob);
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error('Paylaşım hatası:', err);
-          this.downloadImageFallback(canvas, blob);
-        }
-      }
-    }, 'image/png');
-  },
-
-  downloadImageFallback(canvas, blob) {
-    const triggerDownload = () => {
-      try {
-        const url = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `aktif-kampanyalar-${this.getTodayStr()}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        this.showToast('Görsel indirildi! WhatsApp veya başka bir sohbete gönderebilirsiniz.', 'info');
-      } catch (e) {
-        console.error('Görsel indirme hatası:', e);
-        this.showToast('Görsel indirilemedi.', 'error');
-      }
-    };
-
-    // Try copying to clipboard first (ideal fallback on desktop so user can Ctrl+V in WhatsApp)
-    if (navigator.clipboard && window.ClipboardItem && blob) {
-      const item = new ClipboardItem({ [blob.type]: blob });
-      navigator.clipboard.write([item])
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({
+          files: [file],
+          title: 'Aktif Kampanyalar',
+          text: 'Aktif kampanyalarımız ekteki görseldedir.'
+        })
         .then(() => {
-          this.showToast('Görsel panoya kopyalandı ve indiriliyor! WhatsApp açılıyor, doğrudan yapıştırabilirsiniz (Ctrl+V).', 'success');
-          triggerDownload();
-          // Open WhatsApp API to let them choose chat to paste in
-          setTimeout(() => {
-            window.open('https://api.whatsapp.com/send', '_blank');
-          }, 1500);
+          this.showToast('Kampanyalar başarıyla paylaşıldı!', 'success');
         })
         .catch(err => {
-          console.warn('Panoya kopyalama başarısız, sadece indiriliyor:', err);
-          triggerDownload();
+          if (err.name !== 'AbortError') {
+            console.error('Paylaşım hatası:', err);
+            this.executeShareFallback(canvas, file);
+          }
+        });
+      } else {
+        this.executeShareFallback(canvas, file);
+      }
+    } catch (err) {
+      console.error('Paylaşım hazırlık hatası:', err);
+      this.executeShareFallback(canvas, null);
+    }
+  },
+
+  executeShareFallback(canvas, file) {
+    let downloaded = false;
+
+    // 1. Trigger Download synchronously
+    try {
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `aktif-kampanyalar-${this.getTodayStr()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      downloaded = true;
+    } catch (e) {
+      console.error('Görsel indirme hatası:', e);
+    }
+
+    // 2. Open WhatsApp Web/App immediately (must be synchronous to bypass popup blockers)
+    try {
+      window.open('https://api.whatsapp.com/send', '_blank');
+    } catch (e) {
+      console.error('WhatsApp açılırken hata (popup engellenmiş olabilir):', e);
+    }
+
+    // 3. Try to copy to clipboard synchronously
+    if (navigator.clipboard && window.ClipboardItem && file) {
+      const item = new ClipboardItem({ [file.type]: file });
+      navigator.clipboard.write([item])
+        .then(() => {
+          this.showToast('Görsel indirildi ve panoya kopyalandı! WhatsApp Web açılıyor, doğrudan yapıştırabilirsiniz (Ctrl+V).', 'success');
+        })
+        .catch(err => {
+          console.warn('Panoya kopyalama başarısız:', err);
+          if (downloaded) {
+            this.showToast('Görsel indirildi! WhatsApp Web açılıyor, indirdiğiniz dosyayı ekleyerek gönderebilirsiniz.', 'info');
+          } else {
+            this.showToast('Görsel paylaşılamadı veya indirilemedi.', 'error');
+          }
         });
     } else {
-      triggerDownload();
+      if (downloaded) {
+        this.showToast('Görsel indirildi! WhatsApp Web açılıyor, indirdiğiniz dosyayı ekleyerek gönderebilirsiniz.', 'info');
+      } else {
+        this.showToast('Görsel paylaşılamadı.', 'error');
+      }
     }
+  },
+
+  dataURLtoFile(dataurl, filename) {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
   },
 
   truncateText(str, maxLength) {
