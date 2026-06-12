@@ -26,10 +26,15 @@
           </svg>
           <span class="logo-text">Kampanya <span class="logo-accent">Takip</span></span>
         </div>
-        <button id="btn-notification-toggle" class="header-btn" title="Bildirimleri Aç">
-          <span class="notification-icon">🔔</span>
-          <span id="notification-badge" class="badge hidden">0</span>
-        </button>
+        <div class="header-right" style="display: flex; gap: 8px;">
+          <button id="fab-add" class="header-btn" title="Yeni Kampanya Ekle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 20px; height: 20px; color: var(--accent);"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <button id="btn-notification-toggle" class="header-btn" title="Bildirimleri Aç">
+            <span class="notification-icon">🔔</span>
+            <span id="notification-badge" class="badge hidden">0</span>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -299,10 +304,6 @@
       </div>
     </main>
 
-    <!-- FAB -->
-    <button id="fab-add" class="fab" title="Yeni Kampanya Ekle">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    </button>
 
     <!-- Bottom Navigation -->
     <nav id="bottom-nav" aria-label="Ana menü">
