@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v35)',
+    version: '1.0.0 (v36)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -1671,7 +1671,7 @@ const app = {
       ctx.restore();
 
       // 2. Left brand accent bar (clipped to rounded corner)
-      const status = this.getCampaignStatus(campaign);
+      const { status, countdownText: countdown } = this.getCampaignInfo(campaign);
       let accentColor = '#3b82f6'; // Active (blue)
       if (status === 'ending') {
         accentColor = '#f97316'; // Ending (orange)
@@ -1711,7 +1711,6 @@ const app = {
       ctx.fillText(`📅 ${startFormatted} - ${endFormatted}`, 75, cardY + 84);
 
       // Draw countdown badge
-      const countdown = this.getCountdownText(campaign);
       
       let badgeColor = '#1e40af'; // Active
       let badgeBg = '#eff6ff';
