@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v28)',
+    version: '1.0.0 (v29)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -167,6 +167,12 @@ const app = {
     // Navigation
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.addEventListener('click', () => this.switchView(btn.dataset.view));
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.switchView(btn.dataset.view);
+        }
+      });
     });
 
     // FAB

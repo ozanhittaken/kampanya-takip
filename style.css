@@ -805,51 +805,101 @@ body::before {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 8px 16px;
-  background: none;
-  border: none;
-  color: var(--text-muted);
+  padding: 4px 12px;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-width: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
   cursor: pointer;
-  transition: var(--transition);
   position: relative;
   -webkit-tap-highlight-color: transparent;
-}
-
-.nav-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%) scaleX(0);
-  width: 32px;
-  height: 3px;
-  border-radius: 0 0 var(--radius-full) var(--radius-full);
-  background: var(--accent);
+  color: var(--text-secondary);
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  user-select: none;
   transition: var(--transition);
 }
 
-.nav-btn.active {
-  color: var(--accent);
+.nav-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
-.nav-btn.active::before {
-  transform: translateX(-50%) scaleX(1);
+.nav-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: var(--transition-bounce);
+  opacity: 0.55; /* Inactive opacity */
+}
+
+/* Individual tab gradients & shadow colors */
+#nav-dashboard .nav-icon-wrap {
+  background-color: #06b6d4;
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+#nav-dashboard.active .nav-icon-wrap {
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.45);
+}
+
+#nav-campaigns .nav-icon-wrap {
+  background-color: #a855f7;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+}
+#nav-campaigns.active .nav-icon-wrap {
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.45);
+}
+
+#nav-settings .nav-icon-wrap {
+  background-color: #10b981;
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+#nav-settings.active .nav-icon-wrap {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.45);
 }
 
 .nav-icon-svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
+  color: inherit;
   transition: var(--transition);
 }
 
-.nav-btn.active .nav-icon-svg {
+/* Hover & Active animations */
+.nav-btn:hover .nav-icon-wrap {
+  transform: scale(1.08);
+  opacity: 0.85;
+}
+.nav-btn.active .nav-icon-wrap {
   transform: scale(1.1);
+  opacity: 1;
 }
 
 .nav-label {
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+/* Active colors for tab labels */
+#nav-dashboard.active .nav-label {
+  color: #06b6d4 !important;
+}
+#nav-campaigns.active .nav-label {
+  color: #a855f7 !important;
+}
+#nav-settings.active .nav-label {
+  color: #10b981 !important;
 }
 
 /* Middle Nav Add Button */
