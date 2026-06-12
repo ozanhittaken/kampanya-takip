@@ -14,18 +14,16 @@ const app = {
   posterFilter: 'all',
   currentCategory: 'all',
   config: {
-    version: '1.0.0 (v19)',
+    version: '1.0.0 (v20)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
   // --- Category Config ---
   categories: {
     indirim: { label: 'İndirim', icon: '💰', color: '#f59e0b' },
-    '2al1ode': { label: '2 Al 1 Öde', icon: '🎁', color: '#10b981' },
+    xalxode: { label: 'X Al X Öde', icon: '🎁', color: '#10b981' },
     hediye: { label: 'Hediyeli', icon: '🎀', color: '#ec4899' },
     ozel: { label: 'Özel', icon: '⭐', color: '#8b5cf6' },
-    sadakat: { label: 'Sadakat', icon: '💳', color: '#3b82f6' },
-    sezon: { label: 'Sezon', icon: '🌞', color: '#f97316' },
     diger: { label: 'Diğer', icon: '📦', color: '#6b7280' }
   },
 
@@ -68,6 +66,16 @@ const app = {
     try {
       const data = localStorage.getItem('kampanya_campaigns');
       this.campaigns = data ? JSON.parse(data) : [];
+      // Eski kategori değerlerini migrate et
+      const categoryMap = { '2al1ode': 'xalxode', 'sadakat': 'diger', 'sezon': 'diger' };
+      let migrated = false;
+      this.campaigns.forEach(c => {
+        if (categoryMap[c.category]) {
+          c.category = categoryMap[c.category];
+          migrated = true;
+        }
+      });
+      if (migrated) this.saveData();
     } catch (e) {
       console.error('Veri yükleme hatası:', e);
       this.campaigns = [];
