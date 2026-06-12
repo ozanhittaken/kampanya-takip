@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v29)',
+    version: '1.0.0 (v30)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -1082,20 +1082,28 @@ const app = {
   async registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       try {
+        // Listen for controller changes (reliable detection for skipWaiting / clients.claim)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          const banner = document.getElementById('sw-update-banner');
+          if (banner) banner.style.display = 'flex';
+        });
+
         const registration = await navigator.serviceWorker.register('sw.js');
         console.log('Service Worker registered successfully:', registration);
         this.updateNotificationUI();
 
-        // SW update detection
+        // SW update detection (installing worker state changes)
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
+            const checkState = () => {
               if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
                 const banner = document.getElementById('sw-update-banner');
                 if (banner) banner.style.display = 'flex';
               }
-            });
+            };
+            newWorker.addEventListener('statechange', checkState);
+            checkState(); // Check immediately in case it already transitioned
           }
         });
       } catch (e) {
