@@ -1023,15 +1023,23 @@ const app = {
     const campaign = this.campaigns.find(c => c.id === id);
     if (!campaign) return;
 
-    // Format the simple text template for the Graphic request "afiş içeriği" field
-    const endDateObj = new Date(campaign.endDate);
-    const dateFormatted = endDateObj.toLocaleDateString('tr-TR', {
+    // Format start and end dates in simple DD.MM.YYYY format
+    const startObj = new Date(campaign.startDate);
+    const endObj = new Date(campaign.endDate);
+    
+    const startFormatted = startObj.toLocaleDateString('tr-TR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     });
     
-    const textTemplate = `${campaign.name} - Son Gün: ${dateFormatted}`;
+    const endFormatted = endObj.toLocaleDateString('tr-TR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    
+    const textTemplate = `${campaign.name} ${startFormatted}-${endFormatted}`;
 
     // Automatically mark as created when request is initiated
     campaign.demandStatus = 'created';
