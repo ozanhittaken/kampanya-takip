@@ -482,6 +482,9 @@ const app = {
           <span class="poster-badge poster-${campaign.posterStatus || 'pending'}" onclick="app.togglePosterStatus('${campaign.id}', event)">
             ${this.getPosterStatusLabel(campaign.posterStatus || 'pending')}
           </span>
+          <span class="poster-badge demand-${campaign.demandStatus || 'pending'}" onclick="app.toggleDemandStatus('${campaign.id}', event)">
+            ${this.getDemandStatusLabel(campaign.demandStatus || 'pending')}
+          </span>
         </div>
         ${showActions ? `
         <div class="campaign-actions">
@@ -519,12 +522,14 @@ const app = {
       document.getElementById('input-description').value = campaign.description || '';
       document.getElementById('input-category').value = campaign.category;
       document.getElementById('input-poster-status').value = campaign.posterStatus || 'pending';
+      document.getElementById('input-demand-status').value = campaign.demandStatus || 'pending';
       document.getElementById('input-start').value = campaign.startDate;
       document.getElementById('input-end').value = campaign.endDate;
     } else {
       this.editingId = null;
       title.textContent = 'Yeni Kampanya';
       document.getElementById('input-poster-status').value = 'pending';
+      document.getElementById('input-demand-status').value = 'pending';
       // Set default dates
       const today = this.getTodayStr();
       document.getElementById('input-start').value = today;
@@ -548,6 +553,7 @@ const app = {
     const description = document.getElementById('input-description').value.trim();
     const category = document.getElementById('input-category').value;
     const posterStatus = document.getElementById('input-poster-status').value;
+    const demandStatus = document.getElementById('input-demand-status').value;
     const startDate = document.getElementById('input-start').value;
     const endDate = document.getElementById('input-end').value;
 
@@ -567,7 +573,7 @@ const app = {
       if (index !== -1) {
         this.campaigns[index] = {
           ...this.campaigns[index],
-          name, description, category, posterStatus, startDate, endDate,
+          name, description, category, posterStatus, demandStatus, startDate, endDate,
           updatedAt: new Date().toISOString()
         };
         this.showToast('Kampanya güncellendi', 'success');
@@ -576,7 +582,7 @@ const app = {
       // Create new
       const campaign = {
         id: this.generateId(),
-        name, description, category, posterStatus, startDate, endDate,
+        name, description, category, posterStatus, demandStatus, startDate, endDate,
         createdAt: new Date().toISOString()
       };
       this.campaigns.push(campaign);
@@ -1031,19 +1037,56 @@ Detaylar & Açıklama: ${campaign.description || 'Belirtilmedi'}
 -- 
 KampanyaTakip üzerinden otomatik oluşturuldu.`;
 
+    // Automatically mark as created when request is initiated
+    campaign.demandStatus = 'created';
+    campaign.updatedAt = new Date().toISOString();
+    this.saveData();
+    this.renderDashboard();
+    this.renderCampaigns();
+
     // Try to copy to clipboard
     navigator.clipboard.writeText(textTemplate)
       .then(() => {
-        this.showToast('Kampanya detayları panoya kopyalandı! Talep sayfası açılıyor...', 'success');
+        this.showToast('Talep oluşturuldu! Detaylar kopyalandı ve form açılıyor...', 'success');
       })
       .catch((err) => {
         console.error('Kopyalama hatası:', err);
-        this.showToast('Talep sayfası açılıyor...', 'info');
+        this.showToast('Talep oluşturuldu! Form açılıyor...', 'info');
       })
       .finally(() => {
         // Open the company request page in a new window/tab
         window.open('https://corewishasset.com.tr/digital-form/demand-form/create/75', '_blank');
       });
+  },
+
+  getDemandStatusLabel(status) {
+    const statuses = {
+      pending: '🎨 Talep Bekliyor',
+      created: '✅ Talep Oluşturuldu'
+    };
+    return statuses[status] || statuses.pending;
+  },
+
+  toggleDemandStatus(id, event) {
+    if (event) event.stopPropagation();
+    const campaign = this.campaigns.find(c => c.id === id);
+    if (!campaign) return;
+
+    const current = campaign.demandStatus || 'pending';
+    const next = current === 'pending' ? 'created' : 'pending';
+
+    campaign.demandStatus = next;
+    campaign.updatedAt = new Date().toISOString();
+    
+    this.saveData();
+    this.renderDashboard();
+    this.renderCampaigns();
+    
+    const labels = {
+      pending: 'Tasarım talebi bekleniyor olarak işaretlendi',
+      created: 'Tasarım talebi oluşturuldu olarak işaretlendi'
+    };
+    this.showToast(labels[next], 'info');
   }
 };
 

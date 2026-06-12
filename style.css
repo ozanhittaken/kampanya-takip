@@ -1310,10 +1310,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   100% { background-position: -200% 0; }
 }
 
-/* --- Campaign Poster Status --- */
+/* --- Campaign Poster & Demand Status --- */
 .campaign-poster-status {
   margin-top: 12px;
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: flex-start;
 }
 
@@ -1353,4 +1355,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--status-expired);
   background: var(--status-expired-bg);
   border-color: var(--status-expired-border);
+}
+
+.poster-badge.demand-pending {
+  color: var(--status-upcoming);
+  background: var(--status-upcoming-bg);
+  border-color: var(--status-upcoming-border);
+}
+
+.poster-badge.demand-created {
+  color: var(--status-active);
+  background: var(--status-active-bg);
+  border-color: var(--status-active-border);
 }
