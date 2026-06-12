@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v31)',
+    version: '1.0.0 (v32)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -384,9 +384,9 @@ const app = {
     document.querySelector(`[data-view="${viewName}"]`).classList.add('active');
 
     if (viewName === 'dashboard') {
-      this.renderDashboard();
+      requestAnimationFrame(() => this.renderDashboard());
     } else if (viewName === 'campaigns') {
-      this.renderCampaigns();
+      requestAnimationFrame(() => this.renderCampaigns());
     }
 
     // Scroll to top

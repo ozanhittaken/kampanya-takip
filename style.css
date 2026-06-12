@@ -401,6 +401,8 @@ body::before {
   overflow: hidden;
   animation: cardSlideIn 0.3s ease forwards;
   opacity: 0;
+  content-visibility: auto;
+  contain-intrinsic-size: 150px;
 }
 
 @keyframes cardSlideIn {
