@@ -14,7 +14,7 @@ const app = {
   posterFilter: 'all',
   currentCategory: 'all',
   config: {
-    version: '1.0.0 (v20)',
+    version: '1.0.0 (v21)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -160,6 +160,28 @@ const app = {
     document.getElementById('delete-modal').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) this.closeDeleteModal();
     });
+
+    // Confirm modal overlay close (Bug 4)
+    const confirmModalEl = document.getElementById('confirm-modal');
+    if (confirmModalEl) {
+      confirmModalEl.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+          confirmModalEl.classList.remove('open');
+        }
+      });
+    }
+
+    // Search clear button
+    const searchClearBtn = document.getElementById('search-clear-btn');
+    if (searchClearBtn) {
+      searchClearBtn.addEventListener('click', () => {
+        const searchInput = document.getElementById('search-input');
+        searchInput.value = '';
+        this.searchQuery = '';
+        searchClearBtn.classList.add('hidden');
+        this.renderCampaigns();
+      });
+    }
     document.querySelectorAll('.btn-delete-cancel').forEach(btn => {
       btn.addEventListener('click', () => this.closeDeleteModal());
     });
@@ -168,6 +190,10 @@ const app = {
     // Search
     document.getElementById('search-input').addEventListener('input', (e) => {
       this.searchQuery = e.target.value.toLowerCase().trim();
+      const clearBtn = document.getElementById('search-clear-btn');
+      if (clearBtn) {
+        clearBtn.classList.toggle('hidden', !e.target.value);
+      }
       this.renderCampaigns();
     });
 
@@ -224,6 +250,15 @@ const app = {
         }
 
         this.switchView('campaigns');
+        this.updatePosterFilterBanner();
+      });
+    }
+
+    // Poster filter banner clear
+    const posterBannerClearBtn = document.getElementById('poster-filter-clear');
+    if (posterBannerClearBtn) {
+      posterBannerClearBtn.addEventListener('click', () => {
+        this.clearPosterFilter();
       });
     }
 
@@ -438,6 +473,16 @@ const app = {
     this.animateCounter('stat-ending-week', endingWeekCount);
     this.animateCounter('stat-pending-poster', pendingPosterCount);
 
+    // Afiş bekleyen kart pulse animasyonu
+    const pendingCard = document.getElementById('card-pending-poster');
+    if (pendingCard) {
+      if (pendingPosterCount > 0) {
+        pendingCard.classList.add('pulse-warning');
+      } else {
+        pendingCard.classList.remove('pulse-warning');
+      }
+    }
+
     // Update badge count
     const badge = document.getElementById('notification-badge');
     if (badge) {
@@ -541,11 +586,14 @@ const app = {
 
     const container = document.getElementById('campaigns-list');
 
+    // Poster filter banner güncelle
+    this.updatePosterFilterBanner();
+
     if (filtered.length === 0) {
       const message = this.campaigns.length === 0
         ? `<span class="empty-icon">🏷️</span><p>Henüz kampanya eklenmemiş</p>
            <button class="btn btn-primary btn-sm" onclick="app.openModal()">İlk Kampanyayı Ekle</button>`
-        : `<span class="empty-icon">🔍</span><p>Aramanızla eşleşen kampanya bulunamadı</p>`;
+        : `<span class="empty-icon">🔍</span><p>Seçili filtre ve kategoriye uygun kampanya bulunamadı</p>`;
       container.innerHTML = `<div class="empty-state">${message}</div>`;
       return;
     }
@@ -587,6 +635,10 @@ const app = {
           <button class="campaign-action-btn" onclick="app.editCampaign('${campaign.id}')" title="Düzenle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Düzenle
+          </button>
+          <button class="campaign-action-btn" onclick="app.duplicateCampaign('${campaign.id}')" title="Kopyala">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Kopyala
           </button>
           <button class="campaign-action-btn" onclick="app.createPosterDemand('${campaign.id}')" title="Afiş Talebi Gönder">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -694,6 +746,40 @@ const app = {
   editCampaign(id) {
     const campaign = this.campaigns.find(c => c.id === id);
     if (campaign) this.openModal(campaign);
+  },
+
+  duplicateCampaign(id) {
+    const campaign = this.campaigns.find(c => c.id === id);
+    if (!campaign) return;
+    const newCampaign = {
+      ...campaign,
+      id: this.generateId(),
+      name: campaign.name + ' (Kopya)',
+      posterStatus: 'pending',
+      demandStatus: 'pending',
+      createdAt: new Date().toISOString()
+    };
+    this.campaigns.push(newCampaign);
+    this.saveData();
+    this.renderDashboard();
+    this.renderCampaigns();
+    this.showToast('Kampanya kopyalandı', 'success');
+  },
+
+  clearPosterFilter() {
+    this.posterFilter = 'all';
+    this.updatePosterFilterBanner();
+    this.renderCampaigns();
+  },
+
+  updatePosterFilterBanner() {
+    const banner = document.getElementById('poster-filter-banner');
+    if (!banner) return;
+    if (this.posterFilter === 'pending') {
+      banner.classList.remove('hidden');
+    } else {
+      banner.classList.add('hidden');
+    }
   },
 
   deleteCampaign(id) {
@@ -958,9 +1044,9 @@ const app = {
     this.updateNotificationUI();
 
     // Update dynamic version in info footer
-    const appInfoEl = document.querySelector('.app-info p');
+    const appInfoEl = document.getElementById('app-version-text');
     if (appInfoEl) {
-      appInfoEl.textContent = `Kampanya Takip v${this.config.version}`;
+      appInfoEl.textContent = `Kampanya Takip ${this.config.version}`;
     }
   },
 
@@ -1028,7 +1114,9 @@ const app = {
         const data = JSON.parse(event.target.result);
         if (data.campaigns && Array.isArray(data.campaigns)) {
           const newCampaigns = data.campaigns;
-          let importedCount = 0;
+          let addedCount = 0;
+          let updatedCount = 0;
+          let skippedCount = 0;
           let conflictChoice = null; // Can be 'overwrite', 'skip', 'cancel', or null
 
           for (const newCamp of newCampaigns) {
@@ -1054,18 +1142,24 @@ const app = {
 
               if (conflictChoice === 'overwrite') {
                 this.campaigns[existingIndex] = newCamp;
-                importedCount++;
+                updatedCount++;
+              } else {
+                skippedCount++;
               }
             } else {
               this.campaigns.push(newCamp);
-              importedCount++;
+              addedCount++;
             }
           }
 
           this.saveData();
           this.renderDashboard();
           this.renderCampaigns();
-          this.showToast(`${importedCount} kampanya içe aktarıldı`, 'success');
+          const parts = [];
+          if (addedCount > 0) parts.push(`${addedCount} eklendi`);
+          if (updatedCount > 0) parts.push(`${updatedCount} güncellendi`);
+          if (skippedCount > 0) parts.push(`${skippedCount} atlandı`);
+          this.showToast(parts.length > 0 ? parts.join(', ') : 'İçe aktarılacak yeni kampanya yok', parts.length > 0 && skippedCount === 0 ? 'success' : 'info');
         } else {
           this.showToast('Geçersiz dosya formatı', 'error');
         }
@@ -1278,9 +1372,6 @@ const app = {
         btn.className = `btn ${btnInfo.class || 'btn-secondary'}`;
         btn.textContent = btnInfo.label;
         btn.onclick = () => {
-          if (typeof btnInfo.action === 'function') {
-            btnInfo.action();
-          }
           closeModal(btnInfo.value);
         };
         buttonsContainer.appendChild(btn);
@@ -1599,38 +1690,33 @@ const app = {
       'Aktif kampanyalar görseli cihazınıza indirildi. WhatsApp üzerinden paylaşmak istiyor musunuz?',
       [
         { label: 'Kapat', class: 'btn-secondary', value: 'close' },
-        { 
-          label: 'WhatsApp Paylaş', 
-          class: 'btn-primary', 
-          value: 'whatsapp',
-          action: () => {
-            try {
-              window.open('https://api.whatsapp.com/send', '_blank');
-            } catch (e) {
-              console.error('WhatsApp açılırken hata:', e);
-            }
-          }
-        }
+        { label: 'WhatsApp Paylaş', class: 'btn-primary', value: 'whatsapp' }
       ]
     );
 
     if (choice === 'whatsapp') {
-      // 3. Try to copy to clipboard when user wants to share
+      // 3. Önce panoya kopyala, sonra WhatsApp aç
       if (navigator.clipboard && window.ClipboardItem && file) {
         try {
           const item = new ClipboardItem({ [file.type]: file });
           await navigator.clipboard.write([item]);
-          this.showToast('Görsel indirildi ve panoya kopyalandı! WhatsApp açılıyor, doğrudan yapıştırabilirsiniz (Ctrl+V).', 'success');
+          this.showToast('Görsel panoya kopyalandı! WhatsApp\'ta doğrudan yapıştırabilirsiniz (Ctrl+V).', 'success');
         } catch (err) {
           console.warn('Panoya kopyalama başarısız:', err);
-          this.showToast('WhatsApp açıldı! İndirdiğiniz görseli ekleyerek gönderebilirsiniz.', 'info');
+          this.showToast('İndirdiğiniz görseli WhatsApp\'ta ekleyerek gönderebilirsiniz.', 'info');
         }
       } else {
-        this.showToast('WhatsApp açıldı! İndirdiğiniz görseli ekleyerek gönderebilirsiniz.', 'info');
+        this.showToast('İndirdiğiniz görseli WhatsApp\'ta ekleyerek gönderebilirsiniz.', 'info');
+      }
+      // Clipboard işlemi bittikten sonra WhatsApp aç
+      try {
+        window.open('https://api.whatsapp.com/send', '_blank');
+      } catch (e) {
+        console.error('WhatsApp açılırken hata:', e);
       }
     } else {
       if (downloaded) {
-        this.showToast('Görsel paylaşılamadı.', 'error');
+        this.showToast('Görsel indirildi.', 'success');
       }
     }
   },

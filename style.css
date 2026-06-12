@@ -595,7 +595,7 @@ body::before {
 
 #search-input {
   width: 100%;
-  padding: 12px 16px 12px 44px;
+  padding: 12px 40px 12px 44px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -616,6 +616,72 @@ body::before {
   border-color: var(--border-focus);
   background: var(--bg-card-hover);
   box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* Search Clear Button */
+.search-clear-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  border-radius: 50%;
+  transition: var(--transition);
+}
+
+.search-clear-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+}
+
+/* Poster Filter Banner */
+.filter-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.filter-banner-clear {
+  background: none;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: var(--text-secondary);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+
+.filter-banner-clear:hover {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--text-primary);
+}
+
+/* Pulse Warning Animation for stat card */
+@keyframes pulse-warning {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+}
+
+.stat-card.pulse-warning {
+  animation: pulse-warning 2s ease-in-out infinite;
+  border-color: rgba(245, 158, 11, 0.5);
 }
 
 .filter-tabs {

@@ -135,6 +135,7 @@
           <div class="search-box">
             <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input type="text" id="search-input" placeholder="Kampanya ara..." autocomplete="off">
+            <button type="button" id="search-clear-btn" class="search-clear-btn hidden" aria-label="Aramayı temizle">&times;</button>
           </div>
           <div class="filter-tabs" id="filter-tabs">
             <button class="filter-btn active" data-filter="all">Tümü</button>
@@ -165,6 +166,12 @@
             <option value="ozel">⭐ Özel</option>
             <option value="diger">📦 Diğer</option>
           </select>
+        </div>
+
+        <!-- Poster Filter Banner (UX 1) -->
+        <div id="poster-filter-banner" class="filter-banner hidden">
+          <span>🔍 Afiş bekleyen kampanyalar gösteriliyor</span>
+          <button type="button" id="poster-filter-clear" class="filter-banner-clear">✕ Temizle</button>
         </div>
 
         <div id="campaigns-list" class="campaign-list">
@@ -253,7 +260,7 @@
             Test Bildirimi Gönder
           </button>
           <div class="app-info">
-            <p>Kampanya Takip v1.0</p>
+            <p id="app-version-text">Kampanya Takip</p>
             <p class="text-muted">Verileriniz cihazınızda güvenle saklanır.</p>
           </div>
         </div>
