@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kampanya-takip-v9';
+const CACHE_NAME = 'kampanya-takip-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -9,11 +9,37 @@ const ASSETS = [
   './icon-512.png'
 ];
 
-// Install: Cache core assets
+// Helper to fetch and cache bypassing browser HTTP cache
+const cacheBustAsset = async (cache, asset) => {
+  try {
+    const separator = asset.includes('?') ? '&' : '?';
+    const response = await fetch(`${asset}${separator}cb=${Date.now()}`, { cache: 'reload' });
+    if (response.ok) {
+      await cache.put(asset, response);
+      return;
+    }
+  } catch (e) {
+    console.warn(`Cache-busting fetch failed for ${asset}, trying fallback:`, e);
+  }
+  try {
+    const response = await fetch(asset);
+    if (response.ok) {
+      await cache.put(asset, response);
+    }
+  } catch (err) {
+    console.error(`Failed to cache asset ${asset}:`, err);
+  }
+};
+
+// Install: Cache core assets with cache-busting
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(ASSETS))
+      .then(async (cache) => {
+        for (const asset of ASSETS) {
+          await cacheBustAsset(cache, asset);
+        }
+      })
       .then(() => self.skipWaiting())
   );
 });
