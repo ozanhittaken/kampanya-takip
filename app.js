@@ -827,6 +827,15 @@ const app = {
   // =====================
   async registerServiceWorker() {
     if ('serviceWorker' in navigator) {
+      // Auto-reload page when new service worker takes control (bypasses aggressive PWA caching)
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+
       try {
         const registration = await navigator.serviceWorker.register('sw.js');
         console.log('Service Worker registered successfully:', registration);
@@ -1142,7 +1151,7 @@ const app = {
 
     // Dimensions
     const width = 800;
-    const headerHeight = 150;
+    const headerHeight = 135;
     const itemHeight = 130;
     const footerHeight = 80;
     const height = headerHeight + (active.length * itemHeight) + footerHeight;
@@ -1163,14 +1172,14 @@ const app = {
 
     // Font stack styling
     const fontStack = "'-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
-    const fontTitle = `bold 32px 'Inter', ${fontStack}`;
-    const fontSubtitle = `16px 'Inter', ${fontStack}`;
+    const fontTitle = `bold 24px 'Inter', ${fontStack}`;
+    const fontSubtitle = `15px 'Inter', ${fontStack}`;
     const fontCardTitle = `bold 18px 'Inter', ${fontStack}`;
     const fontCardDate = `14px 'Inter', ${fontStack}`;
     const fontBadge = `bold 12px 'Inter', ${fontStack}`;
     const fontFooter = `italic 14px 'Inter', ${fontStack}`;
 
-    // Helper function to wrap text inside canvas
+    // Helper function to wrap text inside canvas (supports up to 3 lines for long campaign names)
     const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
       const words = text.split(' ');
       let line = '';
@@ -1189,37 +1198,77 @@ const app = {
       }
       lines.push(line.trim());
       
-      const linesToDraw = lines.slice(0, 2);
+      const linesToDraw = lines.slice(0, 3);
       linesToDraw.forEach((lineText, idx) => {
         let displayText = lineText;
-        if (idx === 1 && lines.length > 2) {
+        if (idx === 2 && lines.length > 3) {
           displayText = lineText.substring(0, lineText.length - 3) + '...';
         }
         context.fillText(displayText, x, y + (idx * lineHeight));
       });
     };
 
-    // Draw header title
+    // Draw Corewish-style brand logo icon
+    ctx.save();
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(70, 65, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White smile arc
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(70, 65, 10, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+
+    // White dot
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(70, 56, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Draw Corewish Asset Brand Text (Left)
     ctx.font = fontTitle;
     ctx.fillStyle = '#0f172a';
     ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText('📋 AKTİF KAMPANYALARIMIZ', 50, 45);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Corewish', 105, 66);
 
-    // Draw subtitle with date
+    ctx.fillStyle = '#2563eb';
+    ctx.fillText('Asset', 215, 66);
+
+    // Separator line
+    ctx.beginPath();
+    ctx.moveTo(290, 48);
+    ctx.lineTo(290, 82);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // App title
+    ctx.font = `500 18px 'Inter', ${fontStack}`;
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('Kampanya Takip', 305, 67);
+
+    // Date & Count on the right (Right aligned)
+    ctx.font = fontSubtitle;
+    ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
     const dateStr = new Date().toLocaleDateString('tr-TR', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
-    ctx.font = fontSubtitle;
-    ctx.fillStyle = '#475569';
-    ctx.fillText(`Tarih: ${dateStr}  |  Toplam: ${active.length} Kampanya`, 50, 92);
+    ctx.fillText(`${dateStr}  |  Toplam: ${active.length} Aktif`, 750, 67);
 
     // Draw header separator line
     ctx.beginPath();
-    ctx.moveTo(50, 130);
-    ctx.lineTo(750, 130);
+    ctx.moveTo(50, 115);
+    ctx.lineTo(750, 115);
     ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 1;
     ctx.stroke();
@@ -1264,20 +1313,20 @@ const app = {
       // Category config
       const cat = this.categories[campaign.category] || this.categories.diger;
 
-      // Draw campaign name (wrapped dynamically up to 2 lines)
+      // Draw campaign name (wrapped dynamically up to 3 lines)
       ctx.font = fontCardTitle;
       ctx.fillStyle = '#0f172a';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const fullTitleText = `${cat.icon} ${campaign.name}`;
-      wrapText(ctx, fullTitleText, 75, cardY + 18, 450, 24);
+      wrapText(ctx, fullTitleText, 75, cardY + 14, 450, 22);
 
       // Draw date range
       ctx.font = fontCardDate;
       ctx.fillStyle = '#64748b';
       const startFormatted = new Date(campaign.startDate).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
       const endFormatted = new Date(campaign.endDate).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      ctx.fillText(`📅 ${startFormatted} - ${endFormatted}`, 75, cardY + 74);
+      ctx.fillText(`📅 ${startFormatted} - ${endFormatted}`, 75, cardY + 84);
 
       // Draw countdown badge
       const countdown = this.getCountdownText(campaign);
