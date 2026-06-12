@@ -7,6 +7,7 @@ const app = {
   currentFilter: 'all',
   currentSort: 'endDate',
   searchQuery: '',
+  searchTimeout: null,
   editingId: null,
   deleteTargetId: null,
   notificationCheckInterval: null,
@@ -14,7 +15,7 @@ const app = {
   posterFilter: 'all',
   currentCategory: 'all',
   config: {
-    version: '1.0.0 (v21)',
+    version: '1.0.0 (v22)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -55,6 +56,27 @@ const app = {
         this.stopNotificationChecker();
       } else {
         this.startNotificationChecker();
+      }
+    });
+
+    // ESC tuşu ile modal kapatma
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const campaignModal = document.getElementById('campaign-modal');
+        const deleteModal = document.getElementById('delete-modal');
+        const confirmModal = document.getElementById('confirm-modal');
+        if (confirmModal && confirmModal.classList.contains('open')) {
+          // showConfirm'in Promise'ini düzgün resolve et
+          if (typeof this._confirmResolver === 'function') {
+            this._confirmResolver('cancel');
+          } else {
+            confirmModal.classList.remove('open');
+          }
+        } else if (deleteModal && deleteModal.classList.contains('open')) {
+          this.closeDeleteModal();
+        } else if (campaignModal && campaignModal.classList.contains('open')) {
+          this.closeModal();
+        }
       }
     });
   },
@@ -161,16 +183,6 @@ const app = {
       if (e.target === e.currentTarget) this.closeDeleteModal();
     });
 
-    // Confirm modal overlay close (Bug 4)
-    const confirmModalEl = document.getElementById('confirm-modal');
-    if (confirmModalEl) {
-      confirmModalEl.addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) {
-          confirmModalEl.classList.remove('open');
-        }
-      });
-    }
-
     // Search clear button
     const searchClearBtn = document.getElementById('search-clear-btn');
     if (searchClearBtn) {
@@ -189,12 +201,16 @@ const app = {
 
     // Search
     document.getElementById('search-input').addEventListener('input', (e) => {
-      this.searchQuery = e.target.value.toLowerCase().trim();
       const clearBtn = document.getElementById('search-clear-btn');
       if (clearBtn) {
         clearBtn.classList.toggle('hidden', !e.target.value);
       }
-      this.renderCampaigns();
+      // Debounce: 250ms bekle, sonra render et
+      clearTimeout(this.searchTimeout);
+      this.searchTimeout = setTimeout(() => {
+        this.searchQuery = e.target.value.toLowerCase().trim();
+        this.renderCampaigns();
+      }, 250);
     });
 
     // Filter
@@ -332,81 +348,65 @@ const app = {
   // =====================
   //   CAMPAIGN STATUS
   // =====================
+  // UTC bug fix: "2026-06-15" UTC olarak parse edilir, Türkiye'de 1 gün kayabilir
+  parseLocalDate(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  },
+
+  // Tek seferde status + countdown + class hesapla (3x getCampaignStatus çağrısını önler)
+  getCampaignInfo(campaign) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startDay = this.parseLocalDate(campaign.startDate);
+    const endDay = this.parseLocalDate(campaign.endDate);
+    const DAY_MS = 86400000;
+
+    let status, countdownText;
+
+    if (today > endDay) {
+      status = 'expired';
+      const daysAgo = Math.floor((today - endDay) / DAY_MS);
+      countdownText = daysAgo === 0 ? 'Bugün bitti' : `${daysAgo} gün önce bitti`;
+    } else if (today < startDay) {
+      status = 'upcoming';
+      const daysUntil = Math.ceil((startDay - today) / DAY_MS);
+      if (daysUntil === 0) countdownText = 'Bugün başlıyor';
+      else if (daysUntil === 1) countdownText = 'Yarın başlıyor';
+      else countdownText = `${daysUntil} gün sonra başlıyor`;
+    } else {
+      const daysLeft = Math.ceil((endDay - today) / DAY_MS);
+      status = daysLeft <= 2 ? 'ending' : 'active';
+      if (daysLeft === 0) countdownText = 'Bugün bitiyor!';
+      else if (daysLeft === 1) countdownText = 'Yarın bitiyor!';
+      else countdownText = `${daysLeft} gün kaldı`;
+    }
+
+    return { status, countdownText, countdownClass: `countdown-${status}` };
+  },
+
+  // Geriye uyumluluk — eski çağrılar için
   getCampaignStatus(campaign) {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const start = new Date(campaign.startDate);
-    const end = new Date(campaign.endDate);
-    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-
-    if (today > endDay) return 'expired';
-    if (today < startDay) return 'upcoming';
-    
-    // Calculate days remaining
-    const daysLeft = Math.ceil((endDay - today) / (1000 * 60 * 60 * 24));
-    if (daysLeft <= 2) return 'ending';
-    return 'active';
-  },
-
-  getCountdownText(campaign) {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const start = new Date(campaign.startDate);
-    const end = new Date(campaign.endDate);
-    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-
-    const status = this.getCampaignStatus(campaign);
-
-    if (status === 'expired') {
-      const daysAgo = Math.floor((today - endDay) / (1000 * 60 * 60 * 24));
-      if (daysAgo === 0) return 'Bugün bitti';
-      return `${daysAgo} gün önce bitti`;
-    }
-
-    if (status === 'upcoming') {
-      const daysUntil = Math.ceil((startDay - today) / (1000 * 60 * 60 * 24));
-      if (daysUntil === 0) return 'Bugün başlıyor';
-      if (daysUntil === 1) return 'Yarın başlıyor';
-      return `${daysUntil} gün sonra başlıyor`;
-    }
-
-    // Active or ending
-    const daysLeft = Math.ceil((endDay - today) / (1000 * 60 * 60 * 24));
-    if (daysLeft === 0) return 'Bugün bitiyor!';
-    if (daysLeft === 1) return 'Yarın bitiyor!';
-    return `${daysLeft} gün kaldı`;
-  },
-
-  getCountdownClass(campaign) {
-    const status = this.getCampaignStatus(campaign);
-    return `countdown-${status}`;
+    return this.getCampaignInfo(campaign).status;
   },
 
   // =====================
   //   DATE FORMATTING
   // =====================
   formatDate(dateStr) {
-    const date = new Date(dateStr);
+    const date = this.parseLocalDate(dateStr);
     return date.toLocaleDateString('tr-TR', {
       day: 'numeric',
       month: 'short'
     });
   },
 
-  formatDateLong(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('tr-TR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+  getDateStr(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   },
 
   getTodayStr() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return this.getDateStr(new Date());
   },
 
   // =====================
@@ -436,8 +436,8 @@ const app = {
 
     this.campaigns.forEach(c => {
       const status = this.getCampaignStatus(c);
-      const startDay = new Date(new Date(c.startDate).getFullYear(), new Date(c.startDate).getMonth(), new Date(c.startDate).getDate());
-      const endDay = new Date(new Date(c.endDate).getFullYear(), new Date(c.endDate).getMonth(), new Date(c.endDate).getDate());
+      const startDay = this.parseLocalDate(c.startDate);
+      const endDay = this.parseLocalDate(c.endDate);
 
       if (status === 'active' || status === 'ending') {
         activeCount++;
@@ -602,9 +602,7 @@ const app = {
   },
 
   renderCampaignCard(campaign, index, showActions = true) {
-    const status = this.getCampaignStatus(campaign);
-    const countdown = this.getCountdownText(campaign);
-    const countdownClass = this.getCountdownClass(campaign);
+    const { status, countdownText: countdown, countdownClass } = this.getCampaignInfo(campaign);
     const cat = this.categories[campaign.category] || this.categories.diger;
     const delay = Math.min(index * 0.05, 0.3);
 
@@ -665,7 +663,7 @@ const app = {
     if (campaign) {
       this.editingId = campaign.id;
       title.textContent = 'Kampanyayı Düzenle';
-      document.getElementById('input-id').value = campaign.id;
+      // input-id artık kullanılmıyor, editingId yeterli
       document.getElementById('input-name').value = campaign.name;
       document.getElementById('input-description').value = campaign.description || '';
       document.getElementById('input-category').value = campaign.category;
@@ -963,7 +961,7 @@ const app = {
     const todayStr = this.getTodayStr();
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+    const tomorrowStr = this.getDateStr(tomorrow);
 
     this.campaigns.forEach(campaign => {
       // Campaign starts today
@@ -1227,9 +1225,7 @@ const app = {
 
   escapeHtml(str) {
     if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   },
 
   getPosterStatusLabel(status) {
@@ -1356,10 +1352,25 @@ const app = {
         { label: 'Tamam', class: 'btn-primary', value: 'ok' }
       ];
       
+      let resolved = false;
       const closeModal = (val) => {
+        if (resolved) return;
+        resolved = true;
+        this._confirmResolver = null;
         modal.classList.remove('open');
+        // Overlay listener'ı temizle
+        modal.removeEventListener('click', overlayHandler);
         resolve(val);
       };
+
+      // ESC handler'dan erişilebilmesi için
+      this._confirmResolver = closeModal;
+
+      // Overlay tıklaması ile kapatma (Promise sızıntısı fix)
+      const overlayHandler = (e) => {
+        if (e.target === modal) closeModal('cancel');
+      };
+      modal.addEventListener('click', overlayHandler);
       
       const closeBtn = modal.querySelector('.btn-confirm-cancel');
       if (closeBtn) {
@@ -1733,12 +1744,7 @@ const app = {
     return new File([u8arr], filename, { type: mime });
   },
 
-  truncateText(str, maxLength) {
-    if (str.length > maxLength) {
-      return str.substring(0, maxLength - 3) + '...';
-    }
-    return str;
-  }
+  // truncateText kaldırıldı (ölü kod)
 };
 
 // --- Initialize ---
