@@ -200,6 +200,9 @@ const app = {
 
     // Test notification
     document.getElementById('btn-test-notification').addEventListener('click', () => this.sendTestNotification());
+
+    // Share active campaigns
+    document.getElementById('btn-share-active-campaigns').addEventListener('click', () => this.shareActiveCampaignsImage());
   },
 
   // =====================
@@ -1091,6 +1094,187 @@ const app = {
       created: 'Tasarım talebi oluşturuldu olarak işaretlendi'
     };
     this.showToast(labels[next], 'info');
+  },
+
+  shareActiveCampaignsImage() {
+    const active = this.campaigns.filter(c => {
+      const status = this.getCampaignStatus(c);
+      return status === 'active' || status === 'ending';
+    });
+
+    if (active.length === 0) {
+      this.showToast('Paylaşılacak aktif kampanya bulunamadı!', 'warning');
+      return;
+    }
+
+    this.showToast('Görsel hazırlanıyor...', 'info');
+
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Dimensions
+    const width = 800;
+    const headerHeight = 140;
+    const itemHeight = 110;
+    const footerHeight = 80;
+    const height = headerHeight + (active.length * itemHeight) + footerHeight;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Draw background (premium dark gradient)
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, '#0f172a');
+    gradient.addColorStop(1, '#020617');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    // Draw header title
+    ctx.font = 'bold 34px sans-serif';
+    ctx.fillStyle = '#f59e0b';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🎯 AKTİF KAMPANYALARIMIZ', 50, 40);
+
+    // Draw subtitle with date
+    const dateStr = new Date().toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+    ctx.font = '18px sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(`Tarih: ${dateStr}  |  Toplam: ${active.length} Kampanya`, 50, 85);
+
+    // Draw header separator line
+    ctx.beginPath();
+    ctx.moveTo(50, 120);
+    ctx.lineTo(750, 120);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Draw campaign cards
+    active.forEach((campaign, i) => {
+      const cardY = headerHeight + (i * itemHeight);
+      
+      // Card background
+      ctx.beginPath();
+      ctx.roundRect(50, cardY, 700, 90, 14);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Category config
+      const cat = this.categories[campaign.category] || this.categories.diger;
+
+      // Draw name (limit length to prevent overflowing)
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillStyle = '#f8fafc';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      const truncatedName = this.truncateText(`${cat.icon} ${campaign.name}`, 35);
+      ctx.fillText(truncatedName, 75, cardY + 20);
+
+      // Draw date range
+      ctx.font = '15px sans-serif';
+      ctx.fillStyle = '#64748b';
+      const startFormatted = new Date(campaign.startDate).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const endFormatted = new Date(campaign.endDate).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      ctx.fillText(`📅 ${startFormatted} - ${endFormatted}`, 75, cardY + 54);
+
+      // Draw countdown badge
+      const status = this.getCampaignStatus(campaign);
+      const countdown = this.getCountdownText(campaign);
+      
+      let badgeColor = '#2dd4bf'; // Active (teal)
+      let badgeBg = 'rgba(45, 212, 191, 0.08)';
+      let badgeBorder = 'rgba(45, 212, 191, 0.2)';
+      
+      if (status === 'ending') {
+        badgeColor = '#fb923c'; // Ending (orange)
+        badgeBg = 'rgba(251, 146, 60, 0.08)';
+        badgeBorder = 'rgba(251, 146, 60, 0.2)';
+      }
+
+      // Badge rounded box
+      ctx.beginPath();
+      ctx.roundRect(530, cardY + 29, 190, 32, 8);
+      ctx.fillStyle = badgeBg;
+      ctx.fill();
+      ctx.strokeStyle = badgeBorder;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Badge text
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillStyle = badgeColor;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(countdown, 530 + 95, cardY + 29 + 16);
+    });
+
+    // Draw footer text
+    const footerY = height - 50;
+    ctx.font = 'italic 15px sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('KampanyaTakip uygulaması ile hazırlanmıştır.', width / 2, footerY);
+
+    // Convert to blob and share
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        this.showToast('Görsel oluşturulamadı', 'error');
+        return;
+      }
+
+      try {
+        const file = new File([blob], 'aktif-kampanyalar.png', { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Aktif Kampanyalar',
+            text: 'Aktif kampanyalarımız ekteki görseldedir.'
+          });
+          this.showToast('Kampanyalar başarıyla paylaşıldı!', 'success');
+        } else {
+          this.downloadImageFallback(canvas);
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Paylaşım hatası:', err);
+          this.downloadImageFallback(canvas);
+        }
+      }
+    }, 'image/png');
+  },
+
+  downloadImageFallback(canvas) {
+    try {
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `aktif-kampanyalar-${this.getTodayStr()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      this.showToast('Görsel cihazınıza indirildi! WhatsApp veya diğer kanallardan gönderebilirsiniz.', 'info');
+    } catch (e) {
+      console.error('Görsel indirme hatası:', e);
+      this.showToast('Görsel indirilemedi.', 'error');
+    }
+  },
+
+  truncateText(str, maxLength) {
+    if (str.length > maxLength) {
+      return str.substring(0, maxLength - 3) + '...';
+    }
+    return str;
   }
 };
 
