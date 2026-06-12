@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v33)',
+    version: '1.0.0 (v34)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -1384,8 +1384,8 @@ const app = {
     const campaign = this.campaigns.find(c => c.id === id);
     if (!campaign) return;
 
-    const startObj = new Date(campaign.startDate);
-    const endObj = new Date(campaign.endDate);
+    const startObj = this.parseLocalDate(campaign.startDate);
+    const endObj = this.parseLocalDate(campaign.endDate);
     
     const startFormatted = startObj.toLocaleDateString('tr-TR', {
       day: '2-digit',
@@ -1734,8 +1734,10 @@ const app = {
       // Draw date range
       ctx.font = fontCardDate;
       ctx.fillStyle = '#64748b';
-      const startFormatted = new Date(campaign.startDate).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-      const endFormatted = new Date(campaign.endDate).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const startObj = this.parseLocalDate(campaign.startDate);
+      const endObj = this.parseLocalDate(campaign.endDate);
+      const startFormatted = startObj.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const endFormatted = endObj.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
       ctx.fillText(`📅 ${startFormatted} - ${endFormatted}`, 75, cardY + 84);
 
       // Draw countdown badge
