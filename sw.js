@@ -1,10 +1,9 @@
-const CACHE_NAME = 'kampanya-takip-v16';
+const CACHE_NAME = 'kampanya-takip-v17';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
-  './logo.png',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
