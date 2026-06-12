@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v36)',
+    version: '1.0.0 (v37)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -60,8 +60,24 @@ const app = {
         this.stopNotificationChecker();
       } else {
         this.startNotificationChecker();
+        // Check for Service Worker update when user returns to the app
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(registration => {
+            if (typeof registration.update === 'function') {
+              registration.update();
+            }
+          }).catch(err => console.log('SW update check on visibility change failed:', err));
+        }
       }
     });
+
+    // Check if we just updated and show a toast
+    if (localStorage.getItem('kampanya_updated_toast') === 'true') {
+      localStorage.removeItem('kampanya_updated_toast');
+      setTimeout(() => {
+        this.showToast(`Uygulama başarıyla güncellendi! Sürüm: ${this.config.version}`, 'success');
+      }, 1000);
+    }
 
     // ESC tuşu ile modal kapatma
     document.addEventListener('keydown', (e) => {
@@ -1082,10 +1098,13 @@ const app = {
   async registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       try {
-        // Listen for controller changes (reliable detection for skipWaiting / clients.claim)
+        let refreshing = false;
+        // Listen for controller changes (automatic update application)
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-          const banner = document.getElementById('sw-update-banner');
-          if (banner) banner.style.display = 'flex';
+          if (refreshing) return;
+          refreshing = true;
+          localStorage.setItem('kampanya_updated_toast', 'true');
+          window.location.reload();
         });
 
         const registration = await navigator.serviceWorker.register('sw.js');
@@ -1098,17 +1117,13 @@ const app = {
         }
 
         // SW update detection (installing worker state changes)
+        // SW update detection
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           if (newWorker) {
-            const checkState = () => {
-              if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                const banner = document.getElementById('sw-update-banner');
-                if (banner) banner.style.display = 'flex';
-              }
-            };
-            newWorker.addEventListener('statechange', checkState);
-            checkState(); // Check immediately in case it already transitioned
+            newWorker.addEventListener('statechange', () => {
+              console.log('SW state changed:', newWorker.state);
+            });
           }
         });
       } catch (e) {
