@@ -859,17 +859,33 @@ body::before {
   align-items: center;
   gap: 4px;
   padding: 4px 12px;
-  background: none;
-  border: none;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-width: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
   cursor: pointer;
   position: relative;
   -webkit-tap-highlight-color: transparent;
   color: var(--text-secondary);
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  user-select: none;
+}
+.nav-add-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+.nav-add-btn .nav-label {
+  color: var(--text-muted);
 }
 .nav-add-icon-wrap {
   width: 32px;
   height: 32px;
   border-radius: 50%;
+  background-color: var(--accent);
   background: var(--accent-gradient);
   display: flex;
   align-items: center;

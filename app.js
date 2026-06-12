@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v27)',
+    version: '1.0.0 (v28)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -170,7 +170,16 @@ const app = {
     });
 
     // FAB
-    document.getElementById('fab-add').addEventListener('click', () => this.openModal());
+    const fabAdd = document.getElementById('fab-add');
+    if (fabAdd) {
+      fabAdd.addEventListener('click', () => this.openModal());
+      fabAdd.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.openModal();
+        }
+      });
+    }
 
     // Modal
     document.getElementById('btn-modal-close').addEventListener('click', () => this.closeModal());
