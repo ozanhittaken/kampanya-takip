@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v26)',
+    version: '1.0.0 (v27)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
