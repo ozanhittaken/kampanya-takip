@@ -18,7 +18,7 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   config: {
-    version: '1.0.0 (v30)',
+    version: '1.0.0 (v31)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -1091,6 +1091,11 @@ const app = {
         const registration = await navigator.serviceWorker.register('sw.js');
         console.log('Service Worker registered successfully:', registration);
         this.updateNotificationUI();
+
+        // Force an update check on launch to bypass browser HTTP cache (e.g. GitHub Pages 10-min cache)
+        if (typeof registration.update === 'function') {
+          registration.update();
+        }
 
         // SW update detection (installing worker state changes)
         registration.addEventListener('updatefound', () => {
