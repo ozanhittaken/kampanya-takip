@@ -151,28 +151,11 @@ body::before {
   gap: 10px;
 }
 
-.logo-icon {
-  font-size: 1.4rem;
-  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.3));
-}
-
-.header-left h1 {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: -0.03em;
-  display: flex;
-  align-items: center;
-}
-
-.header-left h1 .logo-accent {
-  margin-left: 5px;
-  font-weight: 300;
-  letter-spacing: -0.01em;
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.logo-image {
+  height: 32px;
+  max-width: 180px;
+  object-fit: contain;
+  display: block;
 }
 
 .header-btn {
