@@ -12,7 +12,6 @@ const app = {
   notificationCheckInterval: null,
   notifiedSet: new Set(),
   posterFilter: 'all',
-  currentCategory: 'all',
   config: {
     version: '1.0.0 (v18)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
@@ -174,23 +173,12 @@ const app = {
       });
     });
 
-    // Category Filter Select
-    const categorySelect = document.getElementById('filter-category-select');
-    if (categorySelect) {
-      categorySelect.addEventListener('change', (e) => {
-        this.currentCategory = e.target.value;
-        this.posterFilter = 'all'; // Reset posterFilter on category change
-        this.renderCampaigns();
-      });
-    }
-
     // Pending Poster Card Redirect
     const pendingPosterCard = document.getElementById('card-pending-poster');
     if (pendingPosterCard) {
       pendingPosterCard.addEventListener('click', () => {
         this.currentFilter = 'active';
         this.posterFilter = 'pending';
-        this.currentCategory = 'all';
 
         // Update tabs active class
         document.querySelectorAll('.filter-btn').forEach(b => {
@@ -200,12 +188,6 @@ const app = {
             b.classList.remove('active');
           }
         });
-
-        // Sync category select dropdown in DOM
-        const catSelect = document.getElementById('filter-category-select');
-        if (catSelect) {
-          catSelect.value = 'all';
-        }
 
         this.switchView('campaigns');
       });
@@ -484,10 +466,7 @@ const app = {
       });
     }
 
-    // Category Filter (AND)
-    if (this.currentCategory !== 'all') {
-      filtered = filtered.filter(c => c.category === this.currentCategory);
-    }
+
 
     // Poster Filter (AND)
     if (this.posterFilter === 'pending') {
