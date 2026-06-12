@@ -11,6 +11,12 @@ const app = {
   deleteTargetId: null,
   notificationCheckInterval: null,
   notifiedSet: new Set(),
+  posterFilter: 'all',
+  currentCategory: 'all',
+  config: {
+    version: '1.0.0 (v18)',
+    demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
+  },
 
   // --- Category Config ---
   categories: {
@@ -44,6 +50,15 @@ const app = {
     this.startNotificationChecker();
     this.registerServiceWorker();
     this.applySettings();
+
+    // Page Visibility API to save battery/resources
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.stopNotificationChecker();
+      } else {
+        this.startNotificationChecker();
+      }
+    });
   },
 
   // =====================
@@ -154,9 +169,47 @@ const app = {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.currentFilter = btn.dataset.filter;
+        this.posterFilter = 'all'; // Reset posterFilter on tab change
         this.renderCampaigns();
       });
     });
+
+    // Category Filter Select
+    const categorySelect = document.getElementById('filter-category-select');
+    if (categorySelect) {
+      categorySelect.addEventListener('change', (e) => {
+        this.currentCategory = e.target.value;
+        this.posterFilter = 'all'; // Reset posterFilter on category change
+        this.renderCampaigns();
+      });
+    }
+
+    // Pending Poster Card Redirect
+    const pendingPosterCard = document.getElementById('card-pending-poster');
+    if (pendingPosterCard) {
+      pendingPosterCard.addEventListener('click', () => {
+        this.currentFilter = 'active';
+        this.posterFilter = 'pending';
+        this.currentCategory = 'all';
+
+        // Update tabs active class
+        document.querySelectorAll('.filter-btn').forEach(b => {
+          if (b.dataset.filter === 'active') {
+            b.classList.add('active');
+          } else {
+            b.classList.remove('active');
+          }
+        });
+
+        // Sync category select dropdown in DOM
+        const catSelect = document.getElementById('filter-category-select');
+        if (catSelect) {
+          catSelect.value = 'all';
+        }
+
+        this.switchView('campaigns');
+      });
+    }
 
     // Sort
     document.getElementById('sort-select').addEventListener('change', (e) => {
@@ -318,6 +371,7 @@ const app = {
     let startingTodayCount = 0;
     let endingTodayCount = 0;
     let endingWeekCount = 0;
+    let pendingPosterCount = 0;
     const todayCampaigns = [];
     const endingSoon = [];
 
@@ -328,6 +382,9 @@ const app = {
 
       if (status === 'active' || status === 'ending') {
         activeCount++;
+        if ((c.posterStatus || 'pending') === 'pending') {
+          pendingPosterCount++;
+        }
       }
 
       if (startDay.getTime() === today.getTime()) {
@@ -353,6 +410,7 @@ const app = {
     this.animateCounter('stat-starting-today', startingTodayCount);
     this.animateCounter('stat-ending-today', endingTodayCount);
     this.animateCounter('stat-ending-week', endingWeekCount);
+    this.animateCounter('stat-pending-poster', pendingPosterCount);
 
     // Update badge count
     const badge = document.getElementById('notification-badge');
@@ -415,7 +473,7 @@ const app = {
   renderCampaigns() {
     let filtered = [...this.campaigns];
 
-    // Filter
+    // Status Filter
     if (this.currentFilter !== 'all') {
       filtered = filtered.filter(c => {
         const status = this.getCampaignStatus(c);
@@ -424,6 +482,16 @@ const app = {
         if (this.currentFilter === 'expired') return status === 'expired';
         return true;
       });
+    }
+
+    // Category Filter (AND)
+    if (this.currentCategory !== 'all') {
+      filtered = filtered.filter(c => c.category === this.currentCategory);
+    }
+
+    // Poster Filter (AND)
+    if (this.posterFilter === 'pending') {
+      filtered = filtered.filter(c => (c.posterStatus || 'pending') === 'pending');
     }
 
     // Search
@@ -764,9 +832,17 @@ const app = {
   },
 
   startNotificationChecker() {
+    this.stopNotificationChecker();
     // Check every 60 seconds
     this.checkNotifications();
     this.notificationCheckInterval = setInterval(() => this.checkNotifications(), 60000);
+  },
+
+  stopNotificationChecker() {
+    if (this.notificationCheckInterval) {
+      clearInterval(this.notificationCheckInterval);
+      this.notificationCheckInterval = null;
+    }
   },
 
   checkNotifications() {
@@ -855,6 +931,12 @@ const app = {
     document.getElementById('setting-notify-end').checked = this.settings.notifyEnd;
     document.getElementById('setting-notify-day-before').checked = this.settings.notifyDayBefore;
     this.updateNotificationUI();
+
+    // Update dynamic version in info footer
+    const appInfoEl = document.querySelector('.app-info p');
+    if (appInfoEl) {
+      appInfoEl.textContent = `Kampanya Takip v${this.config.version}`;
+    }
   },
 
   updateNotificationUI() {
@@ -916,23 +998,49 @@ const app = {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const data = JSON.parse(event.target.result);
         if (data.campaigns && Array.isArray(data.campaigns)) {
-          // Merge: add new campaigns, skip existing IDs
-          const existingIds = new Set(this.campaigns.map(c => c.id));
-          let imported = 0;
-          data.campaigns.forEach(c => {
-            if (!existingIds.has(c.id)) {
-              this.campaigns.push(c);
-              imported++;
+          const newCampaigns = data.campaigns;
+          let importedCount = 0;
+          let conflictChoice = null; // Can be 'overwrite', 'skip', 'cancel', or null
+
+          for (const newCamp of newCampaigns) {
+            const existingIndex = this.campaigns.findIndex(c => c.id === newCamp.id);
+            if (existingIndex !== -1) {
+              if (!conflictChoice) {
+                const choice = await this.showConfirm(
+                  'Veri Çakışması',
+                  `Sistemde zaten "${this.escapeHtml(this.campaigns[existingIndex].name)}" gibi aynı ID'ye sahip kampanyalar var. Nasıl devam etmek istersiniz?`,
+                  [
+                    { label: 'Üzerine Yaz', class: 'btn-danger', value: 'overwrite' },
+                    { label: 'Atla', class: 'btn-secondary', value: 'skip' },
+                    { label: 'Vazgeç', class: 'btn-secondary', value: 'cancel' }
+                  ]
+                );
+                
+                if (choice === 'cancel') {
+                  this.showToast('İçe aktarma iptal edildi', 'warning');
+                  return;
+                }
+                conflictChoice = choice;
+              }
+
+              if (conflictChoice === 'overwrite') {
+                this.campaigns[existingIndex] = newCamp;
+                importedCount++;
+              }
+            } else {
+              this.campaigns.push(newCamp);
+              importedCount++;
             }
-          });
+          }
+
           this.saveData();
           this.renderDashboard();
           this.renderCampaigns();
-          this.showToast(`${imported} kampanya içe aktarıldı`, 'success');
+          this.showToast(`${importedCount} kampanya içe aktarıldı`, 'success');
         } else {
           this.showToast('Geçersiz dosya formatı', 'error');
         }
@@ -944,8 +1052,17 @@ const app = {
     e.target.value = '';
   },
 
-  clearAllData() {
-    if (!confirm('Tüm kampanyaları silmek istediğinizden emin misiniz?\nBu işlem geri alınamaz!')) return;
+  async clearAllData() {
+    const choice = await this.showConfirm(
+      'Tüm Verileri Sil',
+      'Tüm kampanyaları silmek istediğinizden emin misiniz?\nBu işlem geri alınamaz!',
+      [
+        { label: 'Vazgeç', class: 'btn-secondary', value: 'cancel' },
+        { label: 'Tümünü Sil', class: 'btn-danger', value: 'clear' }
+      ]
+    );
+    
+    if (choice !== 'clear') return;
 
     this.campaigns = [];
     this.saveData();
@@ -983,10 +1100,10 @@ const app = {
   },
 
   // =====================
-  //   UTILITIES
+  //   UTILITIES & HELPERS
   // =====================
   generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 11);
   },
 
   escapeHtml(str) {
@@ -1020,8 +1137,7 @@ const app = {
     campaign.updatedAt = new Date().toISOString();
     
     this.saveData();
-    this.renderDashboard();
-    this.renderCampaigns();
+    this.updateCampaignBadgesInDOM(id, next, null);
     
     const labels = {
       pending: 'Afiş asılmadı olarak işaretlendi',
@@ -1035,7 +1151,6 @@ const app = {
     const campaign = this.campaigns.find(c => c.id === id);
     if (!campaign) return;
 
-    // Format start and end dates in simple DD.MM.YYYY format
     const startObj = new Date(campaign.startDate);
     const endObj = new Date(campaign.endDate);
     
@@ -1053,14 +1168,11 @@ const app = {
     
     const textTemplate = `${campaign.name} ${startFormatted}-${endFormatted}`;
 
-    // Automatically mark as created when request is initiated
     campaign.demandStatus = 'created';
     campaign.updatedAt = new Date().toISOString();
     this.saveData();
-    this.renderDashboard();
-    this.renderCampaigns();
+    this.updateCampaignBadgesInDOM(id, null, 'created');
 
-    // Try to copy to clipboard
     navigator.clipboard.writeText(textTemplate)
       .then(() => {
         this.showToast('Kampanya içeriği panoya kopyalandı! Talep formundaki "Afiş İçeriği" alanına yapıştırabilirsiniz.', 'success');
@@ -1070,8 +1182,7 @@ const app = {
         this.showToast('Talep oluşturuldu! Form açılıyor...', 'info');
       })
       .finally(() => {
-        // Open the company request page in a new window/tab
-        window.open('https://corewishasset.com.tr/digital-form/demand-form/create/75', '_blank');
+        window.open(this.config.demandFormUrl, '_blank');
       });
   },
 
@@ -1095,14 +1206,105 @@ const app = {
     campaign.updatedAt = new Date().toISOString();
     
     this.saveData();
-    this.renderDashboard();
-    this.renderCampaigns();
+    this.updateCampaignBadgesInDOM(id, null, next);
     
     const labels = {
       pending: 'Tasarım talebi bekleniyor olarak işaretlendi',
       created: 'Tasarım talebi oluşturuldu olarak işaretlendi'
     };
     this.showToast(labels[next], 'info');
+  },
+
+  showConfirm(title, text, buttons = []) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('confirm-modal');
+      const titleEl = document.getElementById('confirm-modal-title');
+      const textEl = document.getElementById('confirm-modal-text');
+      const buttonsContainer = document.getElementById('confirm-modal-buttons');
+      
+      if (!modal || !titleEl || !textEl || !buttonsContainer) {
+        const res = confirm(`${title}\n\n${text}`);
+        resolve(res ? 'yes' : 'no');
+        return;
+      }
+      
+      titleEl.textContent = title;
+      textEl.innerHTML = text.replace(/\n/g, '<br>');
+      buttonsContainer.innerHTML = '';
+      
+      const btnList = buttons.length > 0 ? buttons : [
+        { label: 'İptal', class: 'btn-secondary', value: 'cancel' },
+        { label: 'Tamam', class: 'btn-primary', value: 'ok' }
+      ];
+      
+      const closeModal = (val) => {
+        modal.classList.remove('open');
+        resolve(val);
+      };
+      
+      const closeBtn = modal.querySelector('.btn-confirm-cancel');
+      if (closeBtn) {
+        closeBtn.onclick = () => closeModal('cancel');
+      }
+      
+      btnList.forEach(btnInfo => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `btn ${btnInfo.class || 'btn-secondary'}`;
+        btn.textContent = btnInfo.label;
+        btn.onclick = () => {
+          if (typeof btnInfo.action === 'function') {
+            btnInfo.action();
+          }
+          closeModal(btnInfo.value);
+        };
+        buttonsContainer.appendChild(btn);
+      });
+      
+      modal.classList.add('open');
+    });
+  },
+
+  updateCampaignBadgesInDOM(id, posterStatus, demandStatus) {
+    const cards = document.querySelectorAll(`[data-id="${id}"]`);
+    cards.forEach(card => {
+      if (posterStatus) {
+        const posterBadge = card.querySelector('.poster-badge.poster-pending, .poster-badge.poster-hung, .poster-badge.poster-removed');
+        if (posterBadge) {
+          posterBadge.className = `poster-badge poster-${posterStatus}`;
+          posterBadge.textContent = this.getPosterStatusLabel(posterStatus);
+        }
+      }
+      if (demandStatus) {
+        const demandBadge = card.querySelector('.poster-badge.demand-pending, .poster-badge.demand-created');
+        if (demandBadge) {
+          demandBadge.className = `poster-badge demand-${demandStatus}`;
+          demandBadge.textContent = this.getDemandStatusLabel(demandStatus);
+        }
+      }
+    });
+    this.updateDashboardStatsSilently();
+  },
+
+  updateDashboardStatsSilently() {
+    let activeCount = 0;
+    let pendingPosterCount = 0;
+    
+    this.campaigns.forEach(c => {
+      const status = this.getCampaignStatus(c);
+      if (status === 'active' || status === 'ending') {
+        activeCount++;
+        if ((c.posterStatus || 'pending') === 'pending') {
+          pendingPosterCount++;
+        }
+      }
+    });
+    
+    const activeEl = document.getElementById('stat-active');
+    if (activeEl) activeEl.textContent = activeCount;
+    
+    const pendingEl = document.getElementById('stat-pending-poster');
+    if (pendingEl) pendingEl.textContent = pendingPosterCount;
   },
 
   shareActiveCampaignsImage() {
@@ -1150,25 +1352,31 @@ const app = {
     }
 
     // Dimensions
-    const width = 800;
+    const baseWidth = 800;
     const headerHeight = 105;
     const itemHeight = 130;
     const footerHeight = 30;
-    const height = headerHeight + (active.length * itemHeight) + footerHeight;
+    const baseHeight = headerHeight + (active.length * itemHeight) + footerHeight;
 
-    canvas.width = width;
-    canvas.height = height;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = baseWidth * dpr;
+    canvas.height = baseHeight * dpr;
+    canvas.style.width = `${baseWidth}px`;
+    canvas.style.height = `${baseHeight}px`;
+
+    // Scale drawing context for Retina display/high-DPI scaling support
+    ctx.scale(dpr, dpr);
 
     // Draw background (premium light theme gradient)
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, baseHeight);
     gradient.addColorStop(0, '#f8fafc');
     gradient.addColorStop(1, '#f1f5f9');
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, baseWidth, baseHeight);
 
     // Top Brand Bar (Corewish blue)
     ctx.fillStyle = '#2563eb';
-    ctx.fillRect(0, 0, width, 6);
+    ctx.fillRect(0, 0, baseWidth, 6);
 
     // Font stack styling
     const fontStack = "'-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
@@ -1340,7 +1548,7 @@ const app = {
     }
   },
 
-  executeShareFallback(canvas, file) {
+  async executeShareFallback(canvas, file) {
     let downloaded = false;
 
     // 1. Trigger Download synchronously
@@ -1357,32 +1565,43 @@ const app = {
       console.error('Görsel indirme hatası:', e);
     }
 
-    // 2. Open WhatsApp Web/App immediately (must be synchronous to bypass popup blockers)
-    try {
-      window.open('https://api.whatsapp.com/send', '_blank');
-    } catch (e) {
-      console.error('WhatsApp açılırken hata (popup engellenmiş olabilir):', e);
-    }
-
-    // 3. Try to copy to clipboard synchronously
-    if (navigator.clipboard && window.ClipboardItem && file) {
-      const item = new ClipboardItem({ [file.type]: file });
-      navigator.clipboard.write([item])
-        .then(() => {
-          this.showToast('Görsel indirildi ve panoya kopyalandı! WhatsApp Web açılıyor, doğrudan yapıştırabilirsiniz (Ctrl+V).', 'success');
-        })
-        .catch(err => {
-          console.warn('Panoya kopyalama başarısız:', err);
-          if (downloaded) {
-            this.showToast('Görsel indirildi! WhatsApp Web açılıyor, indirdiğiniz dosyayı ekleyerek gönderebilirsiniz.', 'info');
-          } else {
-            this.showToast('Görsel paylaşılamadı veya indirilemedi.', 'error');
+    // 2. Ask user before opening WhatsApp
+    const choice = await this.showConfirm(
+      'Görsel İndirildi',
+      'Aktif kampanyalar görseli cihazınıza indirildi. WhatsApp üzerinden paylaşmak istiyor musunuz?',
+      [
+        { label: 'Kapat', class: 'btn-secondary', value: 'close' },
+        { 
+          label: 'WhatsApp Paylaş', 
+          class: 'btn-primary', 
+          value: 'whatsapp',
+          action: () => {
+            try {
+              window.open('https://api.whatsapp.com/send', '_blank');
+            } catch (e) {
+              console.error('WhatsApp açılırken hata:', e);
+            }
           }
-        });
+        }
+      ]
+    );
+
+    if (choice === 'whatsapp') {
+      // 3. Try to copy to clipboard when user wants to share
+      if (navigator.clipboard && window.ClipboardItem && file) {
+        try {
+          const item = new ClipboardItem({ [file.type]: file });
+          await navigator.clipboard.write([item]);
+          this.showToast('Görsel indirildi ve panoya kopyalandı! WhatsApp açılıyor, doğrudan yapıştırabilirsiniz (Ctrl+V).', 'success');
+        } catch (err) {
+          console.warn('Panoya kopyalama başarısız:', err);
+          this.showToast('WhatsApp açıldı! İndirdiğiniz görseli ekleyerek gönderebilirsiniz.', 'info');
+        }
+      } else {
+        this.showToast('WhatsApp açıldı! İndirdiğiniz görseli ekleyerek gönderebilirsiniz.', 'info');
+      }
     } else {
       if (downloaded) {
-        this.showToast('Görsel indirildi! WhatsApp Web açılıyor, indirdiğiniz dosyayı ekleyerek gönderebilirsiniz.', 'info');
-      } else {
         this.showToast('Görsel paylaşılamadı.', 'error');
       }
     }
