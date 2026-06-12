@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kampanya-takip-v11';
+const CACHE_NAME = 'kampanya-takip-v12';
 const ASSETS = [
   './',
   './index.html',

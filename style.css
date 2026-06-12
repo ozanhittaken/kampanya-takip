@@ -157,13 +157,22 @@ body::before {
 }
 
 .header-left h1 {
-  font-size: 1.15rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--text-primary), var(--accent));
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: center;
+}
+
+.header-left h1 .logo-accent {
+  margin-left: 5px;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: -0.02em;
 }
 
 .header-btn {

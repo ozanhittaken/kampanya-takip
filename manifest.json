@@ -1,6 +1,6 @@
 {
-  "name": "KampanyaTakip - Süpermarket Kampanya Yönetimi",
-  "short_name": "KampanyaTakip",
+  "name": "Kampanya Takip - Süpermarket Kampanya Yönetimi",
+  "short_name": "Kampanya Takip",
   "description": "Süpermarket kampanyalarını kolayca takip edin, hatırlatıcılar alın.",
   "start_url": "./index.html",
   "display": "standalone",

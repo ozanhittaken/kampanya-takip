@@ -671,9 +671,9 @@ const app = {
     if (Notification.permission === 'denied') {
       let msg = 'Bildirim izni engellenmiş. Lütfen cihaz ayarlarınızdan izin verin.';
       if (isIOS) {
-        msg = 'Bildirim izni engellenmiş. Telefonunuzun Ayarlar -> Bildirimler -> KampanyaTakip bölümünden bildirimlere izin verin.';
+        msg = 'Bildirim izni engellenmiş. Telefonunuzun Ayarlar -> Bildirimler -> Kampanya Takip bölümünden bildirimlere izin verin.';
       } else if (/Android/i.test(navigator.userAgent)) {
-        msg = 'Bildirim izni engellenmiş. Telefonunuzun Ayarlar -> Uygulamalar -> KampanyaTakip -> Bildirimler bölümünden izin verin.';
+        msg = 'Bildirim izni engellenmiş. Telefonunuzun Ayarlar -> Uygulamalar -> Kampanya Takip -> Bildirimler bölümünden izin verin.';
       }
       this.showToast(msg, 'warning');
       this.settings.notifications = false;
@@ -699,7 +699,7 @@ const app = {
         // Trigger a test notification to confirm it works
         this.sendNotification(
           '🚀 Bildirimler Aktif!',
-          'KampanyaTakip hatırlatıcı bildirimleri başarıyla etkinleştirildi.',
+          'Kampanya Takip hatırlatıcı bildirimleri başarıyla etkinleştirildi.',
           'welcome-notification'
         );
       } else {
@@ -756,7 +756,7 @@ const app = {
       return;
     }
     this.sendNotification(
-      '🏷️ KampanyaTakip Test',
+      '🏷️ Kampanya Takip Test',
       'Bildirimler çalışıyor! Kampanyalarınız için hatırlatıcılar alacaksınız.',
       'test-notification'
     );
