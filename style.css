@@ -1879,6 +1879,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--accent);
   font-weight: 800;
 }
+.cal-day.selected {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+}
+.cal-day.selected .cal-day-num {
+  color: var(--accent);
+  font-weight: 800;
+}
+.cal-day.selected:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
 .cal-day.outside-month {
   opacity: 0.25;
   pointer-events: none;

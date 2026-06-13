@@ -18,8 +18,9 @@ const app = {
   batchMode: false,
   selectedCampaigns: new Set(),
   calendarDate: new Date(),
+  selectedCalendarDateStr: '',
   config: {
-    version: '1.0.0 (v40)',
+    version: '1.0.0 (v41)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -2301,6 +2302,7 @@ const app = {
       const dateStr = this.getDateStr(new Date(year, month, d2));
       const campaigns = campaignsByDay[dateStr] || [];
       const isToday = dateStr === todayStr;
+      const isSelected = dateStr === this.selectedCalendarDateStr;
       const hasCampaigns = campaigns.length > 0;
       
       const bars = campaigns.slice(0, 3).map(c => {
@@ -2311,7 +2313,7 @@ const app = {
       const more = campaigns.length > 3 ? `<div class="cal-more">+${campaigns.length - 3}</div>` : '';
       
       html += `
-        <div class="cal-day${isToday ? ' today' : ''}${hasCampaigns ? ' has-campaigns' : ''}" 
+        <div class="cal-day${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}${hasCampaigns ? ' has-campaigns' : ''}" 
              data-date="${dateStr}" onclick="app.showCalendarDayDetail('${dateStr}')">
           <div class="cal-day-num">${d2}</div>
           <div class="cal-day-bars">${bars}</div>
@@ -2334,6 +2336,19 @@ const app = {
   },
 
   showCalendarDayDetail(dateStr) {
+    this.selectedCalendarDateStr = dateStr;
+    
+    // Remove selected class from all calendar days
+    document.querySelectorAll('.cal-day').forEach(el => {
+      el.classList.remove('selected');
+    });
+    
+    // Add selected class to the clicked day cell
+    const clickedEl = document.querySelector(`.cal-day[data-date="${dateStr}"]`);
+    if (clickedEl) {
+      clickedEl.classList.add('selected');
+    }
+
     const date = this.parseLocalDate(dateStr);
     const campaigns = this.campaigns.filter(c => {
       const start = this.parseLocalDate(c.startDate);
