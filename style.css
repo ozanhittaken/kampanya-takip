@@ -528,29 +528,37 @@ body::before {
 }
 
 .campaign-actions {
-  display: flex;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--border-color);
 }
 
+@media (min-width: 480px) {
+  .campaign-actions {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+}
+
 .campaign-action-btn {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 9px 8px;
   border: 1px solid var(--border-color);
   background: var(--bg-glass);
   color: var(--text-secondary);
-  border-radius: var(--radius-xs);
-  font-size: 0.78rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   transition: var(--transition);
   font-family: var(--font);
+  white-space: nowrap;
 }
 
 .campaign-action-btn:hover {
@@ -568,6 +576,7 @@ body::before {
 .campaign-action-btn svg {
   width: 15px;
   height: 15px;
+  flex-shrink: 0;
 }
 
 /* --- Search & Filter --- */
