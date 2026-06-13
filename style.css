@@ -257,7 +257,7 @@ body::before {
   align-items: center;
   gap: 14px;
   transition: var(--transition);
-  cursor: default;
+  cursor: pointer;
 }
 
 .stat-card:hover {

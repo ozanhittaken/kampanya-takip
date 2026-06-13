@@ -20,7 +20,7 @@ const app = {
   calendarDate: new Date(),
   selectedCalendarDateStr: '',
   config: {
-    version: '1.0.0 (v47)',
+    version: '1.0.0 (v48)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -304,6 +304,80 @@ const app = {
 
         this.switchView('campaigns');
         this.updatePosterFilterBanner();
+      });
+    }
+
+    // Dashboard Stat Cards Click Handlers
+    const activeStatCard = document.querySelector('.stat-card[data-type="active"]');
+    if (activeStatCard) {
+      activeStatCard.addEventListener('click', () => {
+        this.currentFilter = 'active';
+        this.posterFilter = 'all';
+        this.currentCategory = 'all';
+        
+        // Sync tabs active class
+        document.querySelectorAll('.filter-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.filter === 'active');
+        });
+        
+        const catSelect = document.getElementById('category-select');
+        if (catSelect) catSelect.value = 'all';
+
+        this.switchView('campaigns');
+      });
+    }
+
+    const startingStatCard = document.querySelector('.stat-card[data-type="starting"]');
+    if (startingStatCard) {
+      startingStatCard.addEventListener('click', () => {
+        this.currentFilter = 'today-start';
+        this.posterFilter = 'all';
+        this.currentCategory = 'all';
+        
+        // Clear active class from all tabs
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        
+        const catSelect = document.getElementById('category-select');
+        if (catSelect) catSelect.value = 'all';
+
+        this.switchView('campaigns');
+        this.showToast('Bugün başlayan kampanyalar listeleniyor', 'info');
+      });
+    }
+
+    const endingStatCard = document.querySelector('.stat-card[data-type="ending"]');
+    if (endingStatCard) {
+      endingStatCard.addEventListener('click', () => {
+        this.currentFilter = 'today-end';
+        this.posterFilter = 'all';
+        this.currentCategory = 'all';
+        
+        // Clear active class from all tabs
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        
+        const catSelect = document.getElementById('category-select');
+        if (catSelect) catSelect.value = 'all';
+
+        this.switchView('campaigns');
+        this.showToast('Bugün biten kampanyalar listeleniyor', 'info');
+      });
+    }
+
+    const weekStatCard = document.querySelector('.stat-card[data-type="week"]');
+    if (weekStatCard) {
+      weekStatCard.addEventListener('click', () => {
+        this.currentFilter = 'week-end';
+        this.posterFilter = 'all';
+        this.currentCategory = 'all';
+        
+        // Clear active class from all tabs
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        
+        const catSelect = document.getElementById('category-select');
+        if (catSelect) catSelect.value = 'all';
+
+        this.switchView('campaigns');
+        this.showToast('Bu hafta biten kampanyalar listeleniyor', 'info');
       });
     }
 
@@ -638,6 +712,23 @@ const app = {
         if (this.currentFilter === 'active') return status === 'active' || status === 'ending';
         if (this.currentFilter === 'upcoming') return status === 'upcoming';
         if (this.currentFilter === 'expired') return status === 'expired';
+        
+        const todayStr = this.getTodayStr();
+        if (this.currentFilter === 'today-start') return c.startDate === todayStr;
+        if (this.currentFilter === 'today-end') return c.endDate === todayStr;
+        if (this.currentFilter === 'week-end') {
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const dayOfWeek = today.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+          const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+          const weekStart = new Date(today);
+          weekStart.setDate(weekStart.getDate() + diffToMonday);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekEnd.getDate() + 6); // Sunday
+          
+          const endDay = this.parseLocalDate(c.endDate);
+          return endDay >= weekStart && endDay <= weekEnd;
+        }
         return true;
       });
     }
