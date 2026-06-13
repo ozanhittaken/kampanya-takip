@@ -1625,9 +1625,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   --border-color: rgba(0,0,0,0.1);
   --border-focus: rgba(245,158,11,0.5);
   --accent-glow: rgba(245,158,11,0.15);
+  --bg-glass: rgba(0, 0, 0, 0.03);
+  --bg-glass-hover: rgba(0, 0, 0, 0.06);
 }
 .light-theme body::before {
   background: radial-gradient(ellipse at top, rgba(245,158,11,0.05), transparent 60%);
+}
+.light-theme #app-header {
+  background: rgba(255, 255, 255, 0.85);
 }
 
 /* Campaign Notes */
