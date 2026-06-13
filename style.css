@@ -2093,3 +2093,23 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-weight: 600;
 }
 
+/* ===== THEME TRANSITION ANIMATION ===== */
+body, 
+#app-header, 
+#bottom-nav, 
+.view,
+.view-content, 
+.campaign-card, 
+.stat-card, 
+.settings-group, 
+.logo-text, 
+.calendar-day-detail, 
+.modal,
+.cal-day {
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              background 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
