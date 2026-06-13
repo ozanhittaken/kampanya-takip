@@ -20,7 +20,7 @@ const app = {
   calendarDate: new Date(),
   selectedCalendarDateStr: '',
   config: {
-    version: '1.0.0 (v44)',
+    version: '1.0.0 (v45)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -352,9 +352,16 @@ const app = {
     if (darkThemeToggle) {
       darkThemeToggle.addEventListener('change', (e) => {
         this.darkTheme = e.target.checked;
-        document.documentElement.classList.toggle('light-theme', !this.darkTheme);
         this.settings.darkTheme = this.darkTheme;
         this.saveSettings();
+
+        if (document.startViewTransition) {
+          document.startViewTransition(() => {
+            document.documentElement.classList.toggle('light-theme', !this.darkTheme);
+          });
+        } else {
+          document.documentElement.classList.toggle('light-theme', !this.darkTheme);
+        }
       });
     }
 
