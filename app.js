@@ -19,7 +19,7 @@ const app = {
   selectedCampaigns: new Set(),
   calendarDate: new Date(),
   config: {
-    version: '1.0.0 (v39)',
+    version: '1.0.0 (v40)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 

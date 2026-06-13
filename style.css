@@ -860,6 +860,14 @@ body::before {
   box-shadow: 0 4px 12px rgba(168, 85, 247, 0.45);
 }
 
+#nav-calendar .nav-icon-wrap {
+  background-color: #f59e0b;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+#nav-calendar.active .nav-icon-wrap {
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.45);
+}
+
 #nav-settings .nav-icon-wrap {
   background-color: #10b981;
   background: linear-gradient(135deg, #10b981, #059669);
@@ -899,6 +907,9 @@ body::before {
 }
 #nav-campaigns.active .nav-label {
   color: #a855f7 !important;
+}
+#nav-calendar.active .nav-label {
+  color: #f59e0b !important;
 }
 #nav-settings.active .nav-label {
   color: #10b981 !important;
