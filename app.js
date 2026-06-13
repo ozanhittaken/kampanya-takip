@@ -17,8 +17,9 @@ const app = {
   darkTheme: true,
   batchMode: false,
   selectedCampaigns: new Set(),
+  calendarDate: new Date(),
   config: {
-    version: '1.0.0 (v38)',
+    version: '1.0.0 (v39)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -387,6 +388,12 @@ const app = {
 
     // Share active campaigns
     document.getElementById('btn-share-active-campaigns').addEventListener('click', () => this.shareActiveCampaignsImage());
+
+    // Calendar navigation
+    const calPrev = document.getElementById('cal-prev');
+    if (calPrev) calPrev.addEventListener('click', () => this.calPrevMonth());
+    const calNext = document.getElementById('cal-next');
+    if (calNext) calNext.addEventListener('click', () => this.calNextMonth());
   },
 
   // =====================
@@ -403,6 +410,8 @@ const app = {
       requestAnimationFrame(() => this.renderDashboard());
     } else if (viewName === 'campaigns') {
       requestAnimationFrame(() => this.renderCampaigns());
+    } else if (viewName === 'calendar') {
+      requestAnimationFrame(() => this.renderCalendar());
     }
 
     // Scroll to top
@@ -1572,13 +1581,141 @@ const app = {
   },
 
   shareActiveCampaignsImage() {
-    const active = this.campaigns.filter(c => {
-      const status = this.getCampaignStatus(c);
-      return status === 'active' || status === 'ending';
-    });
+    this.showShareSelectionModal();
+  },
 
+  showShareSelectionModal() {
+    const existing = document.getElementById('share-select-modal');
+    if (existing) existing.remove();
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'share-select-modal';
+    overlay.className = 'modal-overlay open';
+    overlay.style.zIndex = '300';
+    
+    const activeCampaigns = this.campaigns.filter(c => {
+      const s = this.getCampaignStatus(c);
+      return s === 'active' || s === 'ending';
+    });
+    const allCampaigns = this.campaigns;
+    
+    const checklistItems = allCampaigns.map(c => {
+      const cat = this.categories[c.category] || this.categories.diger;
+      const { status } = this.getCampaignInfo(c);
+      const statusColors = { active: '#2dd4bf', ending: '#fb923c', upcoming: '#60a5fa', expired: '#f87171' };
+      const statusLabels = { active: 'Aktif', ending: 'Bitiyor', upcoming: 'Yaklaşan', expired: 'Bitti' };
+      const isActive = status === 'active' || status === 'ending';
+      return `
+        <label class="share-campaign-check-item">
+          <input type="checkbox" class="share-camp-cb" data-id="${c.id}" ${isActive ? 'checked' : ''}>
+          <span class="share-check-label">${cat.icon} ${this.escapeHtml(c.name)}</span>
+          <span class="share-check-status" style="background:${statusColors[status]}22;color:${statusColors[status]}">${statusLabels[status]}</span>
+        </label>`;
+    }).join('');
+    
+    overlay.innerHTML = `
+      <div class="modal share-select-modal" style="max-width: 90%; width: 480px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius); transform: none !important; max-height: 90dvh; display: flex; flex-direction: column;">
+        <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+          <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0;">📤 Kampanya Seç & Paylaş</h2>
+          <button id="btn-share-sel-close" class="modal-close" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div style="overflow-y: auto; flex: 1; padding: 16px 0;">
+          <div class="share-option" id="share-opt-active" onclick="app._selectShareOpt('active')">
+            <div class="share-option-icon">⚡</div>
+            <div class="share-option-text">
+              <strong>Aktif Kampanyalar</strong>
+              <span>${activeCampaigns.length} aktif kampanya gösterilir</span>
+            </div>
+          </div>
+          <div class="share-option" id="share-opt-all" onclick="app._selectShareOpt('all')">
+            <div class="share-option-icon">📋</div>
+            <div class="share-option-text">
+              <strong>Tüm Kampanyalar</strong>
+              <span>Listedeki tüm ${allCampaigns.length} kampanya gösterilir</span>
+            </div>
+          </div>
+          <div class="share-option" id="share-opt-custom" onclick="app._selectShareOpt('custom')">
+            <div class="share-option-icon">✅</div>
+            <div class="share-option-text">
+              <strong>Özel Seçim</strong>
+              <span>İstediğiniz kampanyaları seçin</span>
+            </div>
+          </div>
+          <div id="share-custom-list" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 6px;">
+              <span style="font-size:0.78rem;color:var(--text-secondary);">Kampanyaları seçin:</span>
+              <div style="display:flex;gap:8px;">
+                <button onclick="app._shareCheckAll(true)" style="font-size:0.75rem;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600;">Tümünü Seç</button>
+                <button onclick="app._shareCheckAll(false)" style="font-size:0.75rem;color:var(--text-muted);background:none;border:none;cursor:pointer;">Temizle</button>
+              </div>
+            </div>
+            <div class="share-campaign-checklist">${checklistItems}</div>
+          </div>
+        </div>
+        <div style="border-top: 1px solid var(--border-color); padding-top: 12px; display: flex; gap: 8px; flex-shrink: 0;">
+          <button id="btn-share-sel-go" class="btn btn-primary" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;font-weight:700;" onclick="app._executeShareSelection()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            Görsel Oluştur
+          </button>
+          <button id="btn-share-sel-cancel" class="btn btn-secondary" style="padding:12px 20px;" onclick="document.getElementById('share-select-modal').remove()">İptal</button>
+        </div>
+      </div>`;
+    
+    this._shareMode = 'active'; // default
+    document.body.appendChild(overlay);
+    
+    // Select active by default
+    document.getElementById('share-opt-active').classList.add('selected');
+    
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('btn-share-sel-close').addEventListener('click', () => overlay.remove());
+  },
+
+  _selectShareOpt(mode) {
+    this._shareMode = mode;
+    ['active','all','custom'].forEach(m => {
+      const el = document.getElementById(`share-opt-${m}`);
+      if (el) el.classList.toggle('selected', m === mode);
+    });
+    const customList = document.getElementById('share-custom-list');
+    if (customList) customList.style.display = mode === 'custom' ? 'block' : 'none';
+  },
+
+  _shareCheckAll(checked) {
+    document.querySelectorAll('.share-camp-cb').forEach(cb => { cb.checked = checked; });
+  },
+
+  _executeShareSelection() {
+    const overlay = document.getElementById('share-select-modal');
+    let campaignList = [];
+    
+    if (this._shareMode === 'active') {
+      campaignList = this.campaigns.filter(c => {
+        const s = this.getCampaignStatus(c);
+        return s === 'active' || s === 'ending';
+      });
+    } else if (this._shareMode === 'all') {
+      campaignList = [...this.campaigns];
+    } else if (this._shareMode === 'custom') {
+      const checkedIds = new Set();
+      document.querySelectorAll('.share-camp-cb:checked').forEach(cb => checkedIds.add(cb.dataset.id));
+      campaignList = this.campaigns.filter(c => checkedIds.has(c.id));
+    }
+    
+    if (campaignList.length === 0) {
+      this.showToast('Lütfen en az bir kampanya seçin', 'warning');
+      return;
+    }
+    
+    if (overlay) overlay.remove();
+    this.buildAndShareImage(campaignList);
+  },
+
+  buildAndShareImage(active) {
     if (active.length === 0) {
-      this.showToast('Paylaşılacak aktif kampanya bulunamadı!', 'warning');
+      this.showToast('Paylaşılacak kampanya bulunamadı!', 'warning');
       return;
     }
 
@@ -1661,7 +1798,14 @@ const app = {
       month: 'long',
       year: 'numeric'
     });
-    ctx.fillText(`📅 ${dateStr}  |  Toplam: ${active.length} Aktif Kampanya`, 50, 50);
+    const activeOnlyList = this.campaigns.filter(c => {
+      const s = this.getCampaignStatus(c);
+      return s === 'active' || s === 'ending';
+    });
+    const isOnlyActive = active.length === activeOnlyList.length && 
+      active.every(c => activeOnlyList.some(ac => ac.id === c.id));
+    const modeLabel = isOnlyActive ? 'Aktif Kampanya' : 'Kampanya';
+    ctx.fillText(`📅 ${dateStr}  |  Toplam: ${active.length} ${modeLabel}`, 50, 50);
 
     // Draw header separator line
     ctx.beginPath();
@@ -1819,7 +1963,7 @@ const app = {
 
     const overlay = document.createElement('div');
     overlay.id = 'share-image-modal';
-    overlay.className = 'modal-overlay active';
+    overlay.className = 'modal-overlay open';
     overlay.style.zIndex = '300';
 
     overlay.innerHTML = `
@@ -2072,6 +2216,169 @@ const app = {
           <span class="chart-bar-value">${count}</span>
         </div>`;
       }).join('');
+  },
+
+  // =====================
+  //   CALENDAR
+  // =====================
+  calPrevMonth() {
+    this.calendarDate = new Date(
+      this.calendarDate.getFullYear(),
+      this.calendarDate.getMonth() - 1,
+      1
+    );
+    this.renderCalendar();
+  },
+
+  calNextMonth() {
+    this.calendarDate = new Date(
+      this.calendarDate.getFullYear(),
+      this.calendarDate.getMonth() + 1,
+      1
+    );
+    this.renderCalendar();
+  },
+
+  renderCalendar() {
+    const d = this.calendarDate;
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    
+    // Update month label
+    const label = document.getElementById('cal-month-label');
+    if (label) {
+      label.textContent = new Date(year, month, 1).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    }
+    
+    const grid = document.getElementById('calendar-grid');
+    if (!grid) return;
+    
+    // Day names (Mon-Sun in Turkish)
+    const dayNames = ['Pt','Sa','Ça','Pe','Cu','Ct','Pz'];
+    
+    // First day of month
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    // Adjust for Monday start (0=Mon, 6=Sun)
+    let startOffset = firstDay.getDay() - 1;
+    if (startOffset < 0) startOffset = 6;
+    
+    const today = new Date();
+    const todayStr = this.getDateStr(today);
+    
+    // Build campaign lookup by date range
+    const campaignsByDay = {};
+    this.campaigns.forEach(c => {
+      const start = this.parseLocalDate(c.startDate);
+      const end = this.parseLocalDate(c.endDate);
+      // For each day in month, check if campaign is active
+      for (let d2 = 1; d2 <= lastDay.getDate(); d2++) {
+        const dayDate = new Date(year, month, d2);
+        if (dayDate >= start && dayDate <= end) {
+          const key = this.getDateStr(dayDate);
+          if (!campaignsByDay[key]) campaignsByDay[key] = [];
+          campaignsByDay[key].push(c);
+        }
+      }
+    });
+    
+    let html = '';
+    
+    // Day name headers
+    dayNames.forEach(name => {
+      html += `<div class="cal-day-name">${name}</div>`;
+    });
+    
+    // Empty cells before first day (Show previous month days)
+    for (let i = 0; i < startOffset; i++) {
+      const prevDate = new Date(year, month, -startOffset + i + 1);
+      html += `<div class="cal-day outside-month"><div class="cal-day-num">${prevDate.getDate()}</div></div>`;
+    }
+    
+    // Days of month
+    for (let d2 = 1; d2 <= lastDay.getDate(); d2++) {
+      const dateStr = this.getDateStr(new Date(year, month, d2));
+      const campaigns = campaignsByDay[dateStr] || [];
+      const isToday = dateStr === todayStr;
+      const hasCampaigns = campaigns.length > 0;
+      
+      const bars = campaigns.slice(0, 3).map(c => {
+        const cat = this.categories[c.category] || this.categories.diger;
+        return `<div class="cal-bar" style="background:${cat.color}"></div>`;
+      }).join('');
+      
+      const more = campaigns.length > 3 ? `<div class="cal-more">+${campaigns.length - 3}</div>` : '';
+      
+      html += `
+        <div class="cal-day${isToday ? ' today' : ''}${hasCampaigns ? ' has-campaigns' : ''}" 
+             data-date="${dateStr}" onclick="app.showCalendarDayDetail('${dateStr}')">
+          <div class="cal-day-num">${d2}</div>
+          <div class="cal-day-bars">${bars}</div>
+          ${more}
+        </div>`;
+    }
+    
+    // Fill remaining cells
+    const totalCells = startOffset + lastDay.getDate();
+    const remainingCells = (7 - (totalCells % 7)) % 7;
+    for (let i = 1; i <= remainingCells; i++) {
+      html += `<div class="cal-day outside-month"><div class="cal-day-num">${i}</div></div>`;
+    }
+    
+    grid.innerHTML = html;
+    
+    // Hide detail panel on re-render
+    const detail = document.getElementById('calendar-day-detail');
+    if (detail) detail.classList.add('hidden');
+  },
+
+  showCalendarDayDetail(dateStr) {
+    const date = this.parseLocalDate(dateStr);
+    const campaigns = this.campaigns.filter(c => {
+      const start = this.parseLocalDate(c.startDate);
+      const end = this.parseLocalDate(c.endDate);
+      return date >= start && date <= end;
+    });
+    
+    const detail = document.getElementById('calendar-day-detail');
+    if (!detail) return;
+    
+    if (campaigns.length === 0) {
+      detail.classList.add('hidden');
+      return;
+    }
+    
+    const dateLabel = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+    
+    const statusLabels = { active: 'Aktif', ending: 'Bitiyor', upcoming: 'Yaklaşan', expired: 'Bitti' };
+    const statusClasses = { active: 'cal-status-active', ending: 'cal-status-ending', upcoming: 'cal-status-upcoming', expired: 'cal-status-expired' };
+    
+    const campaignItems = campaigns.map(c => {
+      const cat = this.categories[c.category] || this.categories.diger;
+      const { status } = this.getCampaignInfo(c);
+      const startFmt = this.formatDate(c.startDate);
+      const endFmt = this.formatDate(c.endDate);
+      return `
+        <div class="cal-campaign-item">
+          <div class="cal-campaign-dot" style="background:${cat.color}"></div>
+          <div class="cal-campaign-info">
+            <div class="cal-campaign-name">${this.escapeHtml(c.name)}</div>
+            <div class="cal-campaign-dates">${cat.icon} ${startFmt} – ${endFmt}</div>
+          </div>
+          <span class="cal-campaign-status-badge ${statusClasses[status] || ''}">${statusLabels[status] || status}</span>
+        </div>`;
+    }).join('');
+    
+    detail.innerHTML = `
+      <div class="cal-detail-header">
+        <div class="cal-detail-title">📅 ${dateLabel} · ${campaigns.length} Kampanya</div>
+        <button class="cal-detail-close" onclick="document.getElementById('calendar-day-detail').classList.add('hidden')">✕</button>
+      </div>
+      ${campaignItems}`;
+    
+    detail.classList.remove('hidden');
+    detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 };
 
