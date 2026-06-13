@@ -1634,6 +1634,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .light-theme #app-header {
   background: rgba(255, 255, 255, 0.85);
 }
+.light-theme #bottom-nav {
+  background: rgba(255, 255, 255, 0.85);
+}
 
 /* Campaign Notes */
 .campaign-notes {

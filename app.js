@@ -20,7 +20,7 @@ const app = {
   calendarDate: new Date(),
   selectedCalendarDateStr: '',
   config: {
-    version: '1.0.0 (v42)',
+    version: '1.0.0 (v43)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
