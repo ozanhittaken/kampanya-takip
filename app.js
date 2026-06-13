@@ -20,7 +20,7 @@ const app = {
   calendarDate: new Date(),
   selectedCalendarDateStr: '',
   config: {
-    version: '1.0.0 (v48)',
+    version: '1.0.0 (v49)',
     demandFormUrl: 'https://corewishasset.com.tr/digital-form/demand-form/create/75'
   },
 
@@ -341,7 +341,6 @@ const app = {
         if (catSelect) catSelect.value = 'all';
 
         this.switchView('campaigns');
-        this.showToast('Bugün başlayan kampanyalar listeleniyor', 'info');
       });
     }
 
@@ -359,7 +358,6 @@ const app = {
         if (catSelect) catSelect.value = 'all';
 
         this.switchView('campaigns');
-        this.showToast('Bugün biten kampanyalar listeleniyor', 'info');
       });
     }
 
@@ -377,7 +375,6 @@ const app = {
         if (catSelect) catSelect.value = 'all';
 
         this.switchView('campaigns');
-        this.showToast('Bu hafta biten kampanyalar listeleniyor', 'info');
       });
     }
 
